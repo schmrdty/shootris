@@ -432,6 +432,46 @@ pub fn create_pvp_match(ctx: &ReducerContext, wallet: String, match_type: MatchT
     ensure_player_exists(ctx, &wallet);
 
     let ts = ctx.timestamp;
+
+    // Merged pools: if someone is already waiting in the queue for this mode,
+    // start an active match with them immediately instead of waiting
+    let mut best_other: Option<MatchQueue> = None;
+    for entry in ctx.db.match_queue().iter() {
+        if entry.match_type == match_type && entry.wallet != wallet {
+            match &best_other {
+                None => best_other = Some(entry),
+                Some(candidate) => {
+                    if entry.created_at < candidate.created_at {
+                        best_other = Some(entry);
+                    }
+                }
+            }
+        }
+    }
+    if let Some(other) = best_other {
+        let m = PvpMatch {
+            match_id: 0,
+            match_type: match_type.clone(),
+            player1_wallet: wallet.clone(),
+            player2_wallet: Some(other.wallet.clone()),
+            status: MatchStatus::Active,
+            join_code: None,
+            player1_score: 0,
+            player2_score: 0,
+            player1_board_state: String::new(),
+            player2_board_state: String::new(),
+            match_duration_seconds: default_duration_for(&match_type),
+            winner_wallet: None,
+            created_at: ts,
+            started_at: Some(ts),
+            completed_at: None,
+            updated_at: ts,
+        };
+        ctx.db.pvp_matches().insert(m);
+        ctx.db.match_queue().queue_id().delete(&other.queue_id);
+        return Ok(());
+    }
+
     let m = PvpMatch {
         match_id: 0,
         match_type: match_type.clone(),
@@ -662,6 +702,37 @@ pub fn join_match_queue(ctx: &ReducerContext, wallet: String, match_type: MatchT
     }
     for id in to_delete {
         ctx.db.match_queue().queue_id().delete(&id);
+    }
+
+    // Merged pools: before queueing, join the earliest public waiting match of
+    // this type (invite-code matches stay private)
+    let mut waiting: Option<PvpMatch> = None;
+    for m in ctx.db.pvp_matches().iter() {
+        if m.match_type == match_type
+            && m.status == MatchStatus::Waiting
+            && m.player2_wallet.is_none()
+            && m.join_code.is_none()
+            && m.player1_wallet != wallet
+        {
+            match &waiting {
+                None => waiting = Some(m),
+                Some(candidate) => {
+                    if m.created_at.to_micros_since_unix_epoch()
+                        < candidate.created_at.to_micros_since_unix_epoch()
+                    {
+                        waiting = Some(m);
+                    }
+                }
+            }
+        }
+    }
+    if let Some(mut m) = waiting {
+        m.player2_wallet = Some(wallet);
+        m.status = MatchStatus::Active;
+        m.started_at = Some(ctx.timestamp);
+        m.updated_at = ctx.timestamp;
+        ctx.db.pvp_matches().match_id().update(m);
+        return Ok(());
     }
 
     // Insert into queue

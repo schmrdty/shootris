@@ -1,5 +1,5 @@
 import type { GameState, Tetromino, BoardSnapshot, PvpFloorHitState, TimeTrialState } from './types';
-import { BOARD_WIDTH, BOARD_HEIGHT, INITIAL_MOVE_SPEED, SPEED_MULTIPLIER, LINES_PER_LEVEL, OBSTACLE_BAND_HEIGHT } from './types';
+import { BOARD_WIDTH, BOARD_HEIGHT, INITIAL_MOVE_SPEED, SPEED_MULTIPLIER, LINES_PER_LEVEL, LEVELS_PER_STAGE, MIN_MOVE_SPEED, OBSTACLE_BAND_HEIGHT } from './types';
 import { getRandomTetromino, rotatePiece } from './tetrominoes';
 
 export function createEmptyBoard(): (string | null)[][] {
@@ -247,12 +247,23 @@ function lockPiece(state: GameState): GameState {
   
   const newLines = state.lines + linesCleared;
   const newLevel = Math.floor(newLines / LINES_PER_LEVEL) + 1;
-  const newMoveSpeed = INITIAL_MOVE_SPEED / Math.pow(SPEED_MULTIPLIER, newLevel - 1);
-  const newScore = state.score + (linesCleared * 100 * newLevel);
+
+  // PvE progression: the speed ramp runs within a stage and resets each stage,
+  // with a hard floor so late levels stay humanly playable
+  const levelInStage = ((newLevel - 1) % LEVELS_PER_STAGE) + 1;
+  const newMoveSpeed = Math.max(MIN_MOVE_SPEED, INITIAL_MOVE_SPEED / Math.pow(SPEED_MULTIPLIER, levelInStage - 1));
+
+  // Completing LEVELS_PER_STAGE levels clears the stage: fresh board + bonus
+  const oldStage = Math.floor((state.level - 1) / LEVELS_PER_STAGE);
+  const newStage = Math.floor((newLevel - 1) / LEVELS_PER_STAGE);
+  const stageCleared = newStage > oldStage;
+  const stageBonus = stageCleared ? 5000 * newStage : 0;
+
+  const newScore = state.score + (linesCleared * 100 * newLevel) + stageBonus;
 
   const newState = {
     ...state,
-    board: clearedBoard,
+    board: stageCleared ? createEmptyBoard() : clearedBoard,
     currentPiece: null,
     lines: newLines,
     level: newLevel,
@@ -281,6 +292,15 @@ function clearLines(board: (string | null)[][]): { board: (string | null)[][]; l
   }
 
   return { board: newBoard, linesCleared };
+}
+
+// Stage helpers for UI display
+export function getStage(level: number): number {
+  return Math.floor((level - 1) / LEVELS_PER_STAGE) + 1;
+}
+
+export function getLevelInStage(level: number): number {
+  return ((level - 1) % LEVELS_PER_STAGE) + 1;
 }
 
 export function createBoardSnapshot(state: GameState): BoardSnapshot {

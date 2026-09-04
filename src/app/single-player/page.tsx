@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSpacetimeDB } from '@/lib/spacetime/hooks';
-import { createInitialGameState, spawnNewPiece, movePieceUp, movePieceLeft, movePieceRight, rotatePieceAction, hardLaunchUp, holdPiece, createBoardSnapshot, restoreFromSnapshot } from '@/lib/tetris/game-engine';
+import { createInitialGameState, spawnNewPiece, movePieceUp, movePieceLeft, movePieceRight, rotatePieceAction, hardLaunchUp, holdPiece, createBoardSnapshot, restoreFromSnapshot, getStage, getLevelInStage } from '@/lib/tetris/game-engine';
+import { LEVELS_PER_STAGE } from '@/lib/tetris/types';
 import type { GameState, BoardSnapshot } from '@/lib/tetris/types';
 import { PAYOUT_SPLIT_ADDRESS, MYU_TOKEN_ADDRESS, MYU_DECIMALS, CONTINUE_PRICE_MYU, MYU_CONFIGURED } from '@/app/config/onchainkit';
 import { parseUnits, encodeFunctionData, erc20Abi } from 'viem';
@@ -38,6 +39,20 @@ export default function SinglePlayerPage() {
     query: { enabled: !!address && MYU_CONFIGURED },
   });
   const hasEnoughMyu = (myuBalance ?? BigInt(0)) >= continuePrice;
+
+  // Stage-clear celebration
+  const stage = getStage(gameState.level);
+  const prevStageRef = useRef(stage);
+  const [clearedStageBanner, setClearedStageBanner] = useState<number | null>(null);
+  useEffect(() => {
+    if (stage > prevStageRef.current) {
+      setClearedStageBanner(prevStageRef.current);
+      prevStageRef.current = stage;
+      const t = setTimeout(() => setClearedStageBanner(null), 2500);
+      return () => clearTimeout(t);
+    }
+    prevStageRef.current = stage;
+  }, [stage]);
 
   // Start a fresh run (server deactivates any previous active run for this wallet)
   const startNewRun = useCallback(() => {
@@ -258,18 +273,8 @@ export default function SinglePlayerPage() {
     ));
   };
 
-  if (!address) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white pt-16">
-        <Card className="p-8 bg-gray-900 border-purple-500">
-          <p>Wallet required. Please connect.</p>
-          <Button onClick={() => router.push('/')} className="mt-4">
-            Back to Menu
-          </Button>
-        </Card>
-      </div>
-    );
-  }
+  // Single-player is always available — no wallet required. Connecting a wallet
+  // adds score persistence, leaderboards, and $MYU continues.
 
   const handleNextTrack = useCallback(() => {
     console.log('Next track requested');
@@ -326,10 +331,19 @@ export default function SinglePlayerPage() {
                   <span className="text-white font-bold">{gameState.lines}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-gray-400">Stage:</span>
+                  <span className="text-yellow-400 font-bold">{stage}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-gray-400">Level:</span>
-                  <span className="text-white font-bold">{gameState.level}</span>
+                  <span className="text-white font-bold">{getLevelInStage(gameState.level)} / {LEVELS_PER_STAGE}</span>
                 </div>
               </div>
+              {!address && (
+                <p className="text-xs text-yellow-400/80 mt-3 border-t border-gray-700 pt-2">
+                  Playing as guest — connect a wallet to save scores and use $MYU continues.
+                </p>
+              )}
             </Card>
 
             {/* Hold Piece */}
@@ -395,6 +409,16 @@ export default function SinglePlayerPage() {
         </div>
       </div>
 
+      {/* Stage clear banner */}
+      {clearedStageBanner !== null && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="bg-black/80 border-4 border-yellow-400 rounded-lg px-10 py-6 shadow-[0_0_40px_rgba(250,204,21,0.7)]">
+            <p className="text-4xl font-black text-yellow-300 neon-yellow tracking-wider text-center">STAGE {clearedStageBanner} CLEAR!</p>
+            <p className="text-center text-cyan-300 font-bold mt-2">+{5000 * clearedStageBanner} BONUS — FRESH BOARD</p>
+          </div>
+        </div>
+      )}
+
       {/* Continue Modal */}
       <Dialog open={showContinueModal} onOpenChange={setShowContinueModal}>
         <DialogContent className="bg-gray-900 border-purple-500">
@@ -405,9 +429,15 @@ export default function SinglePlayerPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-center text-white">
-              Continue from just before you failed for <span className="text-green-400 font-bold">{CONTINUE_PRICE_MYU} $MYU</span> on Base?
-            </p>
+            {address ? (
+              <p className="text-center text-white">
+                Continue from just before you failed for <span className="text-green-400 font-bold">{CONTINUE_PRICE_MYU} $MYU</span> on Base?
+              </p>
+            ) : (
+              <p className="text-center text-gray-300">
+                Connect a wallet to use <span className="text-green-400 font-bold">$MYU</span> continues and save your scores.
+              </p>
+            )}
             {MYU_CONFIGURED && myuBalance !== undefined && (
               <p className="text-center text-sm text-gray-300">
                 Your balance: <span className={hasEnoughMyu ? 'text-cyan-400 font-bold' : 'text-red-400 font-bold'}>
@@ -431,7 +461,7 @@ export default function SinglePlayerPage() {
             <Button variant="outline" onClick={startNewRun} className="w-full sm:w-auto border-purple-500 text-purple-400">
               New Game
             </Button>
-            {hasEnoughMyu ? (
+            {address && (hasEnoughMyu ? (
               <Button onClick={handlePayAndContinue} className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
                 Pay {CONTINUE_PRICE_MYU} $MYU & Continue
               </Button>
@@ -439,7 +469,7 @@ export default function SinglePlayerPage() {
               <Button onClick={() => setShowGetMyuDialog(true)} className="w-full sm:w-auto bg-cyan-600 hover:bg-cyan-700">
                 Get $MYU
               </Button>
-            )}
+            ))}
           </DialogFooter>
         </DialogContent>
       </Dialog>

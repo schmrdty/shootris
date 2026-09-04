@@ -77,4 +77,6 @@ export const BOARD_HEIGHT = 20;
 export const OBSTACLE_BAND_HEIGHT = 4;
 export const INITIAL_MOVE_SPEED = 500; // ms
 export const SPEED_MULTIPLIER = 1.169;
-export const LINES_PER_LEVEL = 32;
+export const LINES_PER_LEVEL = 10;
+export const LEVELS_PER_STAGE = 25;
+export const MIN_MOVE_SPEED = 70; // ms floor so late levels stay physically playable

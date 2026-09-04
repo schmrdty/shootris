@@ -46,8 +46,10 @@ export default function HowToPlayPage() {
             <div>
               <h3 className="font-bold text-white mb-2">Difficulty Curve:</h3>
               <p className="text-sm">
-                Every <span className="text-yellow-400 font-bold">32 lines</span> cleared, the piece upward speed multiplies by{' '}
-                <span className="text-yellow-400 font-bold">1.169×</span> and level increases.
+                Every <span className="text-yellow-400 font-bold">10 lines</span> cleared = 1 level, and every{' '}
+                <span className="text-yellow-400 font-bold">25 levels</span> = 1 stage. Piece speed ramps up each level
+                and resets at the start of each stage — clearing a stage grants a{' '}
+                <span className="text-cyan-400 font-bold">score bonus and a fresh board</span>.
               </p>
             </div>
           </CardContent>
