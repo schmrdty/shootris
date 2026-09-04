@@ -1,5 +1,5 @@
 // SpacetimeDB imports must be at the top.
-use spacetimedb::{table, reducer, ReducerContext, Identity, Table, Timestamp, SpacetimeType};
+use spacetimedb::{table, reducer, ReducerContext, Table, Timestamp, SpacetimeType};
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
