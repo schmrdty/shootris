@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/* Tron + Tetris Theme: Neon blues, cyans, purples, pinks on dark background */
+@layer base {
+  :root {
+    --background: 220 40% 5%;
+    --foreground: 180 100% 85%;
+    --card: 220 30% 8%;
+    --card-foreground: 180 100% 90%;
+    --popover: 220 35% 10%;
+    --popover-foreground: 180 100% 90%;
+    --primary: 195 100% 50%;
+    --primary-foreground: 220 40% 5%;
+    --secondary: 280 80% 60%;
+    --secondary-foreground: 220 40% 5%;
+    --muted: 220 20% 15%;
+    --muted-foreground: 180 50% 60%;
+    --accent: 330 100% 60%;
+    --accent-foreground: 220 40% 5%;
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 195 100% 40%;
+    --input: 195 80% 30%;
+    --ring: 195 100% 50%;
+    --chart-1: 195 100% 50%;
+    --chart-2: 280 80% 60%;
+    --chart-3: 330 100% 60%;
+    --chart-4: 170 100% 50%;
+    --chart-5: 250 90% 65%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background: linear-gradient(135deg, #0a0e27 0%, #1a0a2e 50%, #0f0a1e 100%);
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Neon glow effects */
+  .neon-cyan {
+    text-shadow: 0 0 10px #00f0ff, 0 0 20px #00f0ff, 0 0 30px #00f0ff;
+  }
+
+  .neon-purple {
+    text-shadow: 0 0 10px #b030ff, 0 0 20px #b030ff, 0 0 30px #b030ff;
+  }
+
+  .neon-pink {
+    text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
+  }
+
+  .neon-yellow {
+    text-shadow: 0 0 10px #facc15, 0 0 20px #facc15, 0 0 30px #facc15;
+  }
+
+  /* Grid pattern background */
+  .grid-pattern {
+    background-image: 
+      linear-gradient(rgba(0, 240, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 240, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+}

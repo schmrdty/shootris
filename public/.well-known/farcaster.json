@@ -1,0 +1,36 @@
+{
+  "miniapp": {
+    "version": "1",
+    "name": "Shootr1s",
+    "iconUrl": "https://bafybeigkkszqugfhb7v3znd2cib4xcxu7e6funfi2xx3ntjup3v24ybv2e.ipfs.w3s.link/shootris.png",
+    "homeUrl": "https://shootris.schmidtiest.xyz",
+    "imageUrl": "https://bafybeigkkszqugfhb7v3znd2cib4xcxu7e6funfi2xx3ntjup3v24ybv2e.ipfs.w3s.link/shootris.png",
+    "buttonTitle": "Play Shootris",
+    "splashImageUrl": "https://usdozf7pplhxfvrl.public.blob.vercel-storage.com/farcaster/splash_images/splash_image1.svg",
+    "splashBackgroundColor": "#000000",
+    "tags": [
+      "ohara",
+      "base",
+      "schmidtiest",
+      "farcaster"
+    ],
+    "primaryCategory": "entertainment",
+    "ogTitle": "Shootris ",
+    "ogImageUrl": "https://bafybeigkkszqugfhb7v3znd2cib4xcxu7e6funfi2xx3ntjup3v24ybv2e.ipfs.w3s.link/shootris.png",
+    "supportedPlatforms": [
+      "web",
+      "farcaster",
+      "base"
+    ]
+  },
+  "baseBuilder": {
+    "allowedAddresses": [
+      "0xd9c44586c2f5F3381f4b70f0d21e33Ab8714ab9A"
+    ]
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjIxMzMxMCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDczODVFMUE4MjRBNDA1Y0JCMTNCNjQ4MjlCRjE1MDljZDJBNDcxZjcifQ",
+    "payload": "eyJkb21haW4iOiJhbHJlYWR5LXZhbHVhYmxlLTk5OS5hcHAub2hhcmEuYWkifQ",
+    "signature": "QTxcirdQjLiB7RuwxRPH/fMoFax3TdPR9mBb6TItSNYAMlyr93FDut1kMKQwX1geaVpam5VOs1WCZeoyCY+scBs="
+  }
+}

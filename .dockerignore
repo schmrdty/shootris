@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+spacetime-server/spacetimedb/target
+*.md
+.dockerignore
+Dockerfile
+docker-compose.yml
