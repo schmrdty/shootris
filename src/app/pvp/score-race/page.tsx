@@ -25,7 +25,21 @@ export default function ScoreRacePage() {
   const [joinCode, setJoinCode] = useState('');
   const [inQueue, setInQueue] = useState(false);
   const [matchFound, setMatchFound] = useState(false);
+  const [quickMatchPending, setQuickMatchPending] = useState(false);
+  const [dbTick, setDbTick] = useState(0);
   const [showGetMyu, setShowGetMyu] = useState(false);
+
+  // Re-scan the lobby whenever the matches table changes
+  useEffect(() => {
+    if (!connection) return;
+    const bump = () => setDbTick((t) => t + 1);
+    connection.db.pvpMatches.onInsert(bump);
+    connection.db.pvpMatches.onUpdate(bump);
+    return () => {
+      connection.db.pvpMatches.removeOnInsert(bump);
+      connection.db.pvpMatches.removeOnUpdate(bump);
+    };
+  }, [connection]);
   const { balance: myuBalance, hasEnough, feeRequired, payFee, refetchBalance } = useMyuFee(PVP_ENTRY_FEE_MYU);
 
   // Charge the $MYU entry fee (if configured) before running a matchmaking action
@@ -59,27 +73,40 @@ export default function ScoreRacePage() {
           match.player2Wallet?.toLowerCase() === address.toLowerCase()
         )) {
           mine.push(match);
-          if (match.status.tag === 'Active' && inQueue) {
-            setMatchFound(true);
-            const foundMatchId = match.matchId;
-            setTimeout(() => {
-              setInQueue(false);
-              setMatchFound(false);
-              router.push(`/pvp/play/${foundMatchId}`);
-            }, 2000);
-          }
         }
       }
     }
 
     setWaitingMatches(waiting);
     setMyMatches(mine);
-  }, [connection, address, inQueue]);
+
+    // Auto-enter the newest active match once matchmaking pairs us up
+    // (only matches started in the last 30s, so stale actives don't hijack)
+    if ((inQueue || quickMatchPending) && !matchFound) {
+      const active = mine.filter(
+        (m) =>
+          m.status.tag === 'Active' &&
+          m.startedAt &&
+          Date.now() - Number(m.startedAt.microsSinceUnixEpoch / BigInt(1000)) < 30000
+      );
+      if (active.length > 0) {
+        const newest = active.reduce((a, b) => (b.matchId > a.matchId ? b : a));
+        setMatchFound(true);
+        setQuickMatchPending(false);
+        setTimeout(() => {
+          setInQueue(false);
+          setMatchFound(false);
+          router.push(`/pvp/play/${newest.matchId}`);
+        }, 2000);
+      }
+    }
+  }, [connection, address, inQueue, quickMatchPending, matchFound, router, dbTick]);
 
   const createMatch = useCallback(() => {
     if (!connection || !address) return;
     withEntryFee(() => {
       connection.reducers.createPvpMatch(address.toLowerCase(), MatchType.ScoreRaceTimeTrial);
+      setQuickMatchPending(true);
     });
   }, [connection, address, withEntryFee]);
 

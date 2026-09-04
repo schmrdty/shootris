@@ -433,7 +433,39 @@ pub fn create_pvp_match(ctx: &ReducerContext, wallet: String, match_type: MatchT
 
     let ts = ctx.timestamp;
 
-    // Merged pools: if someone is already waiting in the queue for this mode,
+    // Merged pools: quick match first joins the earliest public waiting match
+    // (so two players both pressing Quick Match pair up instead of each
+    // creating their own waiting match)
+    let mut waiting: Option<PvpMatch> = None;
+    for m in ctx.db.pvp_matches().iter() {
+        if m.match_type == match_type
+            && m.status == MatchStatus::Waiting
+            && m.player2_wallet.is_none()
+            && m.join_code.is_none()
+            && m.player1_wallet != wallet
+        {
+            match &waiting {
+                None => waiting = Some(m),
+                Some(candidate) => {
+                    if m.created_at.to_micros_since_unix_epoch()
+                        < candidate.created_at.to_micros_since_unix_epoch()
+                    {
+                        waiting = Some(m);
+                    }
+                }
+            }
+        }
+    }
+    if let Some(mut m) = waiting {
+        m.player2_wallet = Some(wallet);
+        m.status = MatchStatus::Active;
+        m.started_at = Some(ctx.timestamp);
+        m.updated_at = ctx.timestamp;
+        ctx.db.pvp_matches().match_id().update(m);
+        return Ok(());
+    }
+
+    // Next, if someone is already waiting in the queue for this mode,
     // start an active match with them immediately instead of waiting
     let mut best_other: Option<MatchQueue> = None;
     for entry in ctx.db.match_queue().iter() {
