@@ -268,12 +268,14 @@ export default function PvpPlayPage() {
         case 'ArrowUp':
         case 'w':
         case 'W':
-          setGameState((prev) => rotatePieceAction(prev));
+          e.preventDefault();
+          setGameState((prev) => hardLaunchUp(prev));
           break;
         case 'ArrowDown':
         case 's':
         case 'S':
-          setGameState((prev) => movePieceUp(prev));
+          e.preventDefault();
+          setGameState((prev) => rotatePieceAction(prev));
           break;
         case ' ':
           e.preventDefault();
@@ -436,7 +438,7 @@ export default function PvpPlayPage() {
               )}
               <div className="mt-4 p-3 bg-gray-900/50 rounded border border-gray-700 hidden md:block">
                 <p className="text-xs text-gray-400 text-center">
-                  <span className="font-bold text-purple-400">Controls:</span> ← → or A/D: Move | ↑ or W: Rotate | ↓ or S: Speed Up | Space: Hard Launch | Shift/C: Hold
+                  <span className="font-bold text-purple-400">Controls:</span> ← → or A/D: Move | ↓ or S: Rotate | ↑ or W / Space: Shoot | Shift/C: Hold
                 </p>
               </div>
             </Card>

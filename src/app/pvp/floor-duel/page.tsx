@@ -284,9 +284,14 @@ export default function FloorDuelPage() {
                     </div>
                     <div className="flex gap-2">
                       {match.status.tag === 'Waiting' && (
-                        <Button onClick={() => cancelMatch(match.matchId)} variant="outline" size="sm">
-                          Cancel
-                        </Button>
+                        <>
+                          <Button onClick={() => router.push(`/pvp/play/${match.matchId}`)} size="sm" className="bg-cyan-600 hover:bg-cyan-700">
+                            Open
+                          </Button>
+                          <Button onClick={() => cancelMatch(match.matchId)} variant="outline" size="sm">
+                            Cancel
+                          </Button>
+                        </>
                       )}
                       {match.status.tag === 'Active' && (
                         <Button onClick={() => router.push(`/pvp/play/${match.matchId}`)} className="bg-green-600 hover:bg-green-700">

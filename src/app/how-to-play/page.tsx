@@ -37,9 +37,9 @@ export default function HowToPlayPage() {
               <h3 className="font-bold text-white mb-2">Desktop Controls:</h3>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li><kbd className="px-2 py-1 bg-gray-800 rounded">← →</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">A D</kbd>: Move piece left/right</li>
-                <li><kbd className="px-2 py-1 bg-gray-800 rounded">↑</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">W</kbd>: Rotate piece</li>
-                <li><kbd className="px-2 py-1 bg-gray-800 rounded">↓</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">S</kbd>: Soft speed-up (faster upward movement)</li>
-                <li><kbd className="px-2 py-1 bg-gray-800 rounded">Space</kbd>: Hard launch upward (instant drop to top)</li>
+                <li><kbd className="px-2 py-1 bg-gray-800 rounded">↓</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">S</kbd>: Rotate piece</li>
+                <li><kbd className="px-2 py-1 bg-gray-800 rounded">↑</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">W</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">Space</kbd>: Shoot the tetromino (instant launch to the top)</li>
+                <li><kbd className="px-2 py-1 bg-gray-800 rounded">Shift</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">C</kbd>: Hold piece</li>
               </ul>
             </div>
 

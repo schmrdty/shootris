@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
-import { createInitialGameState, spawnNewPiece, movePieceUp, movePieceLeft, movePieceRight, rotatePieceAction } from '@/lib/tetris/game-engine';
+import { createInitialGameState, spawnNewPiece, movePieceUp, movePieceLeft, movePieceRight, rotatePieceAction, hardLaunchUp } from '@/lib/tetris/game-engine';
 import type { GameState } from '@/lib/tetris/types';
 
 interface MicroShootrisProps {
@@ -19,6 +19,15 @@ export default function MicroShootris({ onClose, matchFound }: MicroShootrisProp
     const newState = spawnNewPiece(createInitialGameState());
     setGameState(newState);
   }, []);
+
+  // Auto-restart the warm-up game when it tops out
+  useEffect(() => {
+    if (!gameState.gameOver) return;
+    const t = setTimeout(() => {
+      setGameState(spawnNewPiece(createInitialGameState()));
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [gameState.gameOver]);
 
   // Game loop
   useEffect(() => {
@@ -50,16 +59,26 @@ export default function MicroShootris({ onClose, matchFound }: MicroShootrisProp
         case 'ArrowLeft':
         case 'a':
         case 'A':
+          e.preventDefault();
           setGameState(prev => movePieceLeft(prev));
           break;
         case 'ArrowRight':
         case 'd':
         case 'D':
+          e.preventDefault();
           setGameState(prev => movePieceRight(prev));
           break;
         case 'ArrowUp':
         case 'w':
         case 'W':
+        case ' ':
+          e.preventDefault();
+          setGameState(prev => hardLaunchUp(prev));
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          e.preventDefault();
           setGameState(prev => rotatePieceAction(prev));
           break;
       }
@@ -88,20 +107,21 @@ export default function MicroShootris({ onClose, matchFound }: MicroShootrisProp
       }
     }
 
-    // Only show top 10 rows for compact display
-    return board.slice(10).reverse().map((row, y) => (
-      <div key={y} className="flex" style={{ height: '12px' }}>
+    // Full 20-row board so the piece is visible for its whole flight
+    return board.slice().reverse().map((row, y) => (
+      <div key={y} className="flex" style={{ height: '13px' }}>
         {row.map((cell, x) => (
           <div
             key={x}
+            className="relative"
             style={{
-              width: '12px',
-              height: '12px',
+              width: '13px',
+              height: '13px',
               backgroundColor: cell || '#000',
               boxShadow: cell ? `0 0 4px ${cell}` : 'none',
             }}
           >
-            <div className="absolute inset-0 border border-cyan-900/20" style={{ width: '12px', height: '12px' }} />
+            <div className="absolute inset-0 border border-cyan-900/20" />
           </div>
         ))}
       </div>
@@ -149,7 +169,7 @@ export default function MicroShootris({ onClose, matchFound }: MicroShootrisProp
         </div>
 
         <div className="mt-4 text-xs text-gray-500 text-center">
-          <p>← →: Move | ↑: Rotate</p>
+          <p>← →: Move | ↓: Rotate | ↑ / Space: Shoot</p>
           <p className="text-yellow-400 mt-2">Searching for opponent...</p>
         </div>
       </div>
