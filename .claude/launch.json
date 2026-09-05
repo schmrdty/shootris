@@ -3,8 +3,11 @@
   "configurations": [
     {
       "name": "shootris-dev",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "dev"],
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set NODE_EXTRA_CA_CERTS=C:\\ProgramData\\Avast Software\\Avast\\wscert.pem&& npx next dev"
+      ],
       "port": 3000
     }
   ]

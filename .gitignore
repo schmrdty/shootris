@@ -5,7 +5,8 @@
 .env
 .env.local
 .env*.local
-
+*.env*
+.en*
 .DS_Store
 next.log
 .vercel
