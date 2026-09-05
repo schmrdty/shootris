@@ -1,5 +1,5 @@
 // SpacetimeDB imports must be at the top.
-use spacetimedb::{table, reducer, ReducerContext, Table, Timestamp, SpacetimeType};
+use spacetimedb::{table, reducer, ReducerContext, Identity, Table, Timestamp, SpacetimeType};
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -27,6 +27,19 @@ pub enum MatchStatus {
 // =========================
 
 const TIME_TRIAL_DEFAULT_SECONDS: i64 = 180;
+
+// PvE progression constants — must mirror src/lib/tetris/types.ts
+const LINES_PER_LEVEL_SRV: u32 = 10;
+const LEVELS_PER_STAGE_SRV: u64 = 25;
+const STAGE_BONUS: u64 = 5000;
+// Max humanly plausible clear rate, with a small grace allowance
+const MAX_LINES_PER_SEC: i64 = 2;
+
+// The app server's SpacetimeDB identity (the account that publishes this
+// module). Only this identity may attest wallet bindings — the Next.js
+// server verifies the wallet's Ethereum signature (EOA and ERC-1271/6492
+// smart wallets) via RPC before calling admin_bind_wallet.
+const ADMIN_IDENTITY_HEX: &str = "c200e8bb42d1cb9144065511ee5e187567e0adc48f32f84bd551bfa0d3dc0531";
 
 // =========================
 /**
@@ -175,11 +188,47 @@ pub struct PvpLeaderboard {
     updated_at: Timestamp,
 }
 
+// Wallet <-> SpacetimeDB identity bindings, attested by the app server.
+// A caller may only mutate data for wallets whose binding matches ctx.sender.
+#[table(name = wallet_bindings, public)]
+#[derive(Clone)]
+pub struct WalletBinding {
+    #[primary_key]
+    wallet: String,
+    identity: Identity,
+    bound_at: Timestamp,
+}
+
 // =========================
 /**
  * Internal Helpers
  */
 // =========================
+
+fn admin_identity() -> Identity {
+    Identity::from_hex(ADMIN_IDENTITY_HEX).expect("ADMIN_IDENTITY_HEX must be valid hex")
+}
+
+// The caller's identity must be bound to `wallet` (or be the app server).
+fn require_bound(ctx: &ReducerContext, wallet: &str) -> Result<(), String> {
+    if ctx.sender == admin_identity() {
+        return Ok(());
+    }
+    match ctx.db.wallet_bindings().wallet().find(&wallet.to_string()) {
+        Some(b) if b.identity == ctx.sender => Ok(()),
+        Some(_) => Err("Caller identity is not bound to this wallet".into()),
+        None => Err("Wallet not verified — complete wallet verification first".into()),
+    }
+}
+
+// Upper bound on a legitimate single-player score for a given line count,
+// mirroring the client engine's scoring formula.
+fn max_plausible_score(lines: u32) -> u64 {
+    let max_level = (lines / LINES_PER_LEVEL_SRV + 1) as u64;
+    let stages_cleared = max_level.saturating_sub(1) / LEVELS_PER_STAGE_SRV;
+    let stage_bonus_total = STAGE_BONUS * stages_cleared * (stages_cleared + 1) / 2;
+    (lines as u64) * 100 * max_level + stage_bonus_total
+}
 
 fn ensure_player_exists(ctx: &ReducerContext, wallet: &str) {
     if ctx.db.players().wallet().find(&wallet.to_string()).is_none() {
@@ -263,6 +312,37 @@ fn default_duration_for(match_type: &MatchType) -> i64 {
 }
 
 // =========================
+// Reducers: Wallet binding (app-server attested)
+// =========================
+
+#[reducer]
+pub fn admin_bind_wallet(ctx: &ReducerContext, wallet: String, identity_hex: String) -> Result<(), String> {
+    if ctx.sender != admin_identity() {
+        return Err("Only the app server may bind wallets".into());
+    }
+    let wallet = wallet.trim().to_lowercase();
+    if wallet.is_empty() {
+        return Err("Wallet cannot be empty".into());
+    }
+    let identity = Identity::from_hex(identity_hex.trim())
+        .map_err(|e| format!("Invalid identity hex: {e}"))?;
+    ensure_player_exists(ctx, &wallet);
+    if let Some(mut b) = ctx.db.wallet_bindings().wallet().find(&wallet) {
+        // Re-binding with a fresh verified signature is allowed (new device/browser)
+        b.identity = identity;
+        b.bound_at = ctx.timestamp;
+        ctx.db.wallet_bindings().wallet().update(b);
+    } else {
+        ctx.db.wallet_bindings().insert(WalletBinding {
+            wallet,
+            identity,
+            bound_at: ctx.timestamp,
+        });
+    }
+    Ok(())
+}
+
+// =========================
 // Reducers: Player management
 // =========================
 
@@ -290,6 +370,7 @@ pub fn register_player(ctx: &ReducerContext, wallet: String) -> Result<(), Strin
 
 #[reducer]
 pub fn set_player_music(ctx: &ReducerContext, wallet: String, music_on: bool) -> Result<(), String> {
+    require_bound(ctx, &wallet)?;
     ensure_player_exists(ctx, &wallet);
     if let Some(mut player) = ctx.db.players().wallet().find(&wallet) {
         player.music_on = music_on;
@@ -310,6 +391,7 @@ pub fn start_single_run(ctx: &ReducerContext, wallet: String, initial_board: Str
     if wallet.trim().is_empty() {
         return Err("Wallet cannot be empty".into());
     }
+    require_bound(ctx, &wallet)?;
     ensure_player_exists(ctx, &wallet);
 
     // Deactivate any existing active runs for wallet
@@ -357,6 +439,26 @@ pub fn update_single_run(
     won: bool,
 ) -> Result<(), String> {
     if let Some(mut run) = ctx.db.game_runs().run_id().find(&run_id) {
+        require_bound(ctx, &run.wallet)?;
+
+        // Server-side plausibility checks
+        if score < run.score || lines_cleared < run.lines_cleared {
+            return Err("Score and lines cannot decrease within a run".into());
+        }
+        let expected_level = lines_cleared / LINES_PER_LEVEL_SRV + 1;
+        if level_reached != expected_level {
+            return Err("Level inconsistent with lines cleared".into());
+        }
+        let elapsed_secs = (ctx.timestamp.to_micros_since_unix_epoch()
+            - run.created_at.to_micros_since_unix_epoch())
+            / 1_000_000;
+        if (lines_cleared as i64) > elapsed_secs.max(1) * MAX_LINES_PER_SEC + 4 {
+            return Err("Implausible line clear rate".into());
+        }
+        if score > max_plausible_score(lines_cleared) {
+            return Err("Implausible score for lines cleared".into());
+        }
+
         let wallet_clone = run.wallet.clone();
         let was_active = run.active;
 
@@ -397,6 +499,7 @@ pub fn record_continue_payment(
     if wallet.trim().is_empty() {
         return Err("Wallet cannot be empty".into());
     }
+    require_bound(ctx, &wallet)?;
     if amount_cents <= 0 {
         return Err("Amount must be positive".into());
     }
@@ -429,6 +532,7 @@ pub fn create_pvp_match(ctx: &ReducerContext, wallet: String, match_type: MatchT
     if wallet.trim().is_empty() {
         return Err("Wallet cannot be empty".into());
     }
+    require_bound(ctx, &wallet)?;
     ensure_player_exists(ctx, &wallet);
 
     let ts = ctx.timestamp;
@@ -536,6 +640,7 @@ pub fn create_pvp_match_with_code(ctx: &ReducerContext, wallet: String, match_ty
     if code.is_empty() {
         return Err("Join code cannot be empty".into());
     }
+    require_bound(ctx, &wallet)?;
     ensure_player_exists(ctx, &wallet);
 
     // Ensure code is not already in use for a waiting match
@@ -573,6 +678,7 @@ pub fn join_pvp_match(ctx: &ReducerContext, wallet: String, match_id: u64) -> Re
     if wallet.trim().is_empty() {
         return Err("Wallet cannot be empty".into());
     }
+    require_bound(ctx, &wallet)?;
     if let Some(mut m) = ctx.db.pvp_matches().match_id().find(&match_id) {
         if m.status != MatchStatus::Waiting || m.player2_wallet.is_some() {
             return Err("Match is not joinable".into());
@@ -603,6 +709,7 @@ pub fn join_pvp_match_by_code(ctx: &ReducerContext, wallet: String, join_code: S
     if code.is_empty() {
         return Err("Join code cannot be empty".into());
     }
+    require_bound(ctx, &wallet)?;
     ensure_player_exists(ctx, &wallet);
 
     // Find a waiting match by code
@@ -634,14 +741,32 @@ pub fn join_pvp_match_by_code(ctx: &ReducerContext, wallet: String, join_code: S
 
 #[reducer]
 pub fn update_pvp_board(ctx: &ReducerContext, match_id: u64, wallet: String, board_state: String, score: i128) -> Result<(), String> {
+    require_bound(ctx, &wallet)?;
     if let Some(mut m) = ctx.db.pvp_matches().match_id().find(&match_id) {
         if m.status != MatchStatus::Active && m.status != MatchStatus::Waiting {
             return Err("Cannot update board for a completed or cancelled match".into());
         }
+
+        // Plausibility: scores never decrease and are rate-bounded
+        let started = m.started_at.unwrap_or(m.created_at);
+        let elapsed_secs = ((ctx.timestamp.to_micros_since_unix_epoch()
+            - started.to_micros_since_unix_epoch())
+            / 1_000_000)
+            .max(1);
+        if score > (elapsed_secs as i128) * 2000 {
+            return Err("Implausible PvP score rate".into());
+        }
+
         if m.player1_wallet == wallet {
+            if score < m.player1_score {
+                return Err("PvP score cannot decrease".into());
+            }
             m.player1_board_state = board_state;
             m.player1_score = score;
         } else if m.player2_wallet.as_ref().map(|w| w == &wallet).unwrap_or(false) {
+            if score < m.player2_score {
+                return Err("PvP score cannot decrease".into());
+            }
             m.player2_board_state = board_state;
             m.player2_score = score;
         } else {
@@ -661,6 +786,33 @@ pub fn complete_pvp_match(ctx: &ReducerContext, match_id: u64, winner_wallet: St
         if m.status == MatchStatus::Completed || m.status == MatchStatus::Cancelled {
             return Err("Match is already finalized".into());
         }
+
+        // Caller must be a bound participant (or the app server)
+        let sender_bound_to = |w: &String| {
+            ctx.db
+                .wallet_bindings()
+                .wallet()
+                .find(w)
+                .map(|b| b.identity == ctx.sender)
+                .unwrap_or(false)
+        };
+        let caller_is_participant = sender_bound_to(&m.player1_wallet)
+            || m.player2_wallet.as_ref().map(&sender_bound_to).unwrap_or(false);
+        if !caller_is_participant && ctx.sender != admin_identity() {
+            return Err("Caller is not a participant in this match".into());
+        }
+
+        // Score races are decided by the server-recorded scores, not the caller
+        let winner_wallet = if m.match_type == MatchType::ScoreRaceTimeTrial {
+            if m.player2_score > m.player1_score {
+                m.player2_wallet.clone().unwrap_or_else(|| m.player1_wallet.clone())
+            } else {
+                m.player1_wallet.clone()
+            }
+        } else {
+            winner_wallet
+        };
+
         // Validate winner is a participant
         let winner_is_p1 = m.player1_wallet == winner_wallet;
         let winner_is_p2 = m.player2_wallet.as_ref().map(|w| w == &winner_wallet).unwrap_or(false);
@@ -723,6 +875,7 @@ pub fn join_match_queue(ctx: &ReducerContext, wallet: String, match_type: MatchT
     if wallet.trim().is_empty() {
         return Err("Wallet cannot be empty".into());
     }
+    require_bound(ctx, &wallet)?;
     ensure_player_exists(ctx, &wallet);
 
     // Prevent duplicate entries for the same wallet by removing existing queue rows
@@ -837,6 +990,7 @@ pub fn leave_match_queue(ctx: &ReducerContext, wallet: String) -> Result<(), Str
     if wallet.trim().is_empty() {
         return Err("Wallet cannot be empty".into());
     }
+    require_bound(ctx, &wallet)?;
     let mut to_delete: Vec<u64> = Vec::new();
     for row in ctx.db.match_queue().iter() {
         if row.wallet == wallet {

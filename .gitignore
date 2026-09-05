@@ -14,3 +14,9 @@ output.log
 error.log
 
 core
+
+# Foundry build artifacts (contracts/ is staged source only)
+contracts/out
+contracts/cache
+contracts/lib
+contracts/broadcast
