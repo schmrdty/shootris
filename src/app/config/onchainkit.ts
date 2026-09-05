@@ -1,8 +1,8 @@
 import type { Token } from '@coinbase/onchainkit/token';
 import { base } from 'wagmi/chains';
 
-export const ONCHAINKIT_API_KEY = 'WY33o3kSZsBtNDeaaTILgOr5cJBiC7Cz';
-export const ONCHAINKIT_PROJECT_ID = 'WY33o3kSZsBtNDeaaTILgOr5cJBiC7Cz';
+export const ONCHAINKIT_API_KEY = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY || '';
+export const ONCHAINKIT_PROJECT_ID = process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_ID || '';
 export const PAYOUT_SPLIT_ADDRESS = process.env.NEXT_PUBLIC_PAYOUT_SPLIT_ADDRESS || '0x0000000000000000000000000000000000000000';
 export const USDC_BASE_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 export const SPACETIME_MODULE_NAME = 'shootris-game';
