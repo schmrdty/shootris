@@ -19,26 +19,11 @@ Deployment target: `shootris.schmidtiest.xyz`. After deploying, re-sign the Farc
 
 The frontend is the only thing you host — the game backend is the SpacetimeDB module on Maincloud, and payments/swaps run on Base.
 
-### Option A: Any VPS with Docker (no Vercel dependency)
+Production runs on the **VPS-front-door + home-server** pattern shared by all D3MYUR games: a small VPS terminates TLS with Caddy and forwards over a private Tailscale tunnel to Docker containers on the home server. Full setup and the add-a-game checklist live in [infra/README.md](infra/README.md).
 
-```bash
-docker compose up -d --build
-```
+(Fallback: the repo also deploys cleanly to Vercel — import, set the `.env.local` vars, add the domain.)
 
-Serves on port 3000. Put a reverse proxy with TLS in front (Caddy is the easiest: `caddy reverse-proxy --from shootris.schmidtiest.xyz --to localhost:3000` gets automatic HTTPS). `NEXT_PUBLIC_*` values are baked in at build time from `.env.local`, so rebuild the image after changing them.
-
-### Option B: Vercel
-
-Import the repo at vercel.com/new (or `npx vercel`), add the `.env.local` variables in Project Settings → Environment Variables, then add `shootris.schmidtiest.xyz` under Project Settings → Domains.
-
-### DNS (either option)
-
-At your `schmidtiest.xyz` DNS provider, add a record for the `shootris` subdomain:
-
-- **VPS**: an `A` record pointing to the server's IP
-- **Vercel**: a `CNAME` record pointing to `cname.vercel-dns.com`
-
-HTTPS is required for Farcaster mini-app embedding (Caddy or Vercel both handle certificates automatically).
+HTTPS is required for Farcaster mini-app embedding; Caddy handles certificates automatically once the `shootris.schmidtiest.xyz` A record points at the VPS.
  
 ## Getting Started
 

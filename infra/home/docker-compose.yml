@@ -1,0 +1,22 @@
+# Production compose for the HOME SERVER.
+# Builds from the repo root Dockerfile (standalone Next.js build).
+#
+# Create infra/home/.env next to this file with:
+#   TAILNET_IP=100.x.y.z        # this machine's Tailscale IP (tailscale ip -4)
+# Without it, the game binds to localhost only (safe default; the VPS
+# won't reach it until TAILNET_IP is set).
+#
+# The repo root .env.local must exist before building: NEXT_PUBLIC_* values
+# are baked in at build time, and server-side secrets (SPACETIMEDB_ADMIN_TOKEN)
+# are injected at runtime via env_file below.
+
+services:
+  shootris:
+    build:
+      context: ../..
+    container_name: shootris
+    restart: unless-stopped
+    env_file:
+      - ../../.env.local
+    ports:
+      - "${TAILNET_IP:-127.0.0.1}:3000:3000"
