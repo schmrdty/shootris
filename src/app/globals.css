@@ -129,6 +129,7 @@ html[data-theme="earthen"] .bg-black\/90,
 html[data-theme="earthen"] .bg-black\/80,
 html[data-theme="earthen"] .bg-black\/70,
 html[data-theme="earthen"] .bg-black\/50,
+html[data-theme="earthen"] .bg-black\/60,
 html[data-theme="earthen"] .bg-gray-900,
 html[data-theme="earthen"] .bg-gray-900\/50 {
   background-color: rgba(248, 243, 229, 0.92) !important;

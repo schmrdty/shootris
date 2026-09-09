@@ -30,7 +30,7 @@ const TIME_TRIAL_DEFAULT_SECONDS: i64 = 180;
 
 // PvE progression constants — must mirror src/lib/tetris/types.ts
 const LINES_PER_LEVEL_SRV: u32 = 10;
-const LEVELS_PER_STAGE_SRV: u64 = 25;
+const LEVELS_PER_STAGE_SRV: u64 = 10;
 const STAGE_BONUS: u64 = 5000;
 // Max humanly plausible clear rate, with a small grace allowance
 const MAX_LINES_PER_SEC: i64 = 2;

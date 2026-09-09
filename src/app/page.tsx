@@ -64,10 +64,10 @@ export default function Home() {
   // Allow viewing menu without wallet - only require wallet for gameplay
 
   return (
-    <div className="min-h-screen grid-pattern px-4 py-8 pt-20" style={{ background: 'linear-gradient(135deg, #0a0e27 0%, #1a0a2e 50%, #0f0a1e 100%)' }}>
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen grid-pattern px-3 sm:px-4 py-6 sm:py-8 pt-14 sm:pt-20" style={{ background: 'linear-gradient(135deg, #0a0e27 0%, #1a0a2e 50%, #0f0a1e 100%)' }}>
+      <div className="max-w-5xl mx-auto space-y-5 sm:space-y-8">
         {/* Wallet Connect Bar */}
-        <div className="flex justify-end gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-3 mb-2 sm:mb-4">
           <ShareOnFarcaster />
           <WalletConnect />
         </div>
@@ -75,13 +75,13 @@ export default function Home() {
         {/* Header */}
         <Card className="bg-black/90 border-4 border-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.5)]">
           <CardHeader>
-            <CardTitle className="text-6xl text-center font-black tracking-wider neon-cyan">
+            <CardTitle className="text-4xl sm:text-6xl text-center font-black tracking-wider neon-cyan">
               SHOOTRIS
             </CardTitle>
-            <CardDescription className="text-center text-xl font-bold text-cyan-300 mt-4 tracking-wide flex items-center justify-center gap-2">
-              <ChevronsUp className="h-6 w-6" aria-hidden="true" />
-              INVERTED TETRIS - PIECES RISE FROM BOTTOM
-              <ChevronsUp className="h-6 w-6" aria-hidden="true" />
+            <CardDescription className="text-center text-sm sm:text-xl font-bold text-cyan-300 mt-3 sm:mt-4 tracking-wide flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+              <ChevronsUp className="h-4 w-4 sm:h-6 sm:w-6 shrink-0" aria-hidden="true" />
+              INVERTED TETRIS — PIECES RISE FROM BOTTOM
+              <ChevronsUp className="h-4 w-4 sm:h-6 sm:w-6 shrink-0" aria-hidden="true" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -106,8 +106,8 @@ export default function Home() {
               </div>
             ) : (
               <div className="text-center space-y-4">
-                <p className="text-2xl font-black text-yellow-300 tracking-wide neon-yellow flex items-center justify-center gap-2">
-                  <TriangleAlert className="h-7 w-7" aria-hidden="true" />
+                <p className="text-lg sm:text-2xl font-black text-yellow-300 tracking-wide neon-yellow flex items-center justify-center gap-2">
+                  <TriangleAlert className="h-5 w-5 sm:h-7 sm:w-7 shrink-0" aria-hidden="true" />
                   WALLET NOT CONNECTED
                 </p>
                 <p className="text-lg font-bold text-gray-300">
@@ -122,11 +122,11 @@ export default function Home() {
         </Card>
 
         {/* Main Menu */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           <Link href="/single-player" className="block group">
             <Card className="h-full bg-gradient-to-br from-purple-900/70 to-black/90 border-4 border-purple-500 hover:border-purple-300 transition-all cursor-pointer hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:scale-105">
               <CardHeader>
-                <CardTitle className="text-3xl font-black text-purple-300 tracking-wider group-hover:neon-purple flex items-center gap-3">
+                <CardTitle className="text-2xl sm:text-3xl font-black text-purple-300 tracking-wider group-hover:neon-purple flex items-center gap-2 sm:gap-3">
                   <Gamepad2 className="h-8 w-8" aria-hidden="true" /> SINGLE PLAYER
                 </CardTitle>
                 <CardDescription className="text-lg font-bold text-purple-200 mt-2">
@@ -145,7 +145,7 @@ export default function Home() {
           <Link href="/pvp" className="block group">
             <Card className="h-full bg-gradient-to-br from-cyan-900/70 to-black/90 border-4 border-cyan-500 hover:border-cyan-300 transition-all cursor-pointer hover:shadow-[0_0_30px_rgba(0,240,255,0.6)] hover:scale-105">
               <CardHeader>
-                <CardTitle className="text-3xl font-black text-cyan-300 tracking-wider group-hover:neon-cyan flex items-center gap-3">
+                <CardTitle className="text-2xl sm:text-3xl font-black text-cyan-300 tracking-wider group-hover:neon-cyan flex items-center gap-2 sm:gap-3">
                   <Swords className="h-8 w-8" aria-hidden="true" /> PVP MODES
                 </CardTitle>
                 <CardDescription className="text-lg font-bold text-cyan-200 mt-2">
@@ -163,7 +163,7 @@ export default function Home() {
           <Link href="/leaderboard" className="block group">
             <Card className="h-full bg-gradient-to-br from-yellow-900/70 to-black/90 border-4 border-yellow-500 hover:border-yellow-300 transition-all cursor-pointer hover:shadow-[0_0_30px_rgba(250,204,21,0.6)] hover:scale-105">
               <CardHeader>
-                <CardTitle className="text-3xl font-black text-yellow-300 tracking-wider group-hover:neon-yellow flex items-center gap-3">
+                <CardTitle className="text-2xl sm:text-3xl font-black text-yellow-300 tracking-wider group-hover:neon-yellow flex items-center gap-2 sm:gap-3">
                   <Trophy className="h-8 w-8" aria-hidden="true" /> LEADERBOARD
                 </CardTitle>
                 <CardDescription className="text-lg font-bold text-yellow-200 mt-2">
@@ -181,7 +181,7 @@ export default function Home() {
           <Link href="/settings" className="block group">
             <Card className="h-full bg-gradient-to-br from-pink-900/70 to-black/90 border-4 border-pink-500 hover:border-pink-300 transition-all cursor-pointer hover:shadow-[0_0_30px_rgba(255,0,255,0.6)] hover:scale-105">
               <CardHeader>
-                <CardTitle className="text-3xl font-black text-pink-300 tracking-wider group-hover:neon-pink flex items-center gap-3">
+                <CardTitle className="text-2xl sm:text-3xl font-black text-pink-300 tracking-wider group-hover:neon-pink flex items-center gap-2 sm:gap-3">
                   <Settings className="h-8 w-8" aria-hidden="true" /> SETTINGS
                 </CardTitle>
                 <CardDescription className="text-lg font-bold text-pink-200 mt-2">

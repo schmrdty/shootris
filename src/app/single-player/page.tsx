@@ -16,7 +16,20 @@ import { parseUnits, encodeFunctionData, erc20Abi } from 'viem';
 import { useSendTransaction, useReadContract } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { InGameMusicControls } from '@/components/InGameMusicControls';
-import { GetMyuDialog } from '@/components/GetMyuDialog';
+import { StageAmbience } from '@/components/StageAmbience';
+import { Wallet, ConnectWallet } from '@coinbase/onchainkit/wallet';
+import { Swap, SwapAmountInput, SwapToggleButton, SwapButton, SwapMessage, SwapToast } from '@coinbase/onchainkit/swap';
+import { MYU_TOKEN, SWAP_FROM_TOKENS } from '@/app/config/onchainkit';
+import { Infinity as InfinityIcon, Map as MapIcon, Award } from 'lucide-react';
+
+type PlayMode = 'free' | 'journey';
+
+// Journey mode: each level must be cleared before its timer runs out;
+// budgets shrink as levels climb.
+const JOURNEY_BASE_TIME = 90;
+const JOURNEY_MIN_TIME = 45;
+const levelTimeBudget = (level: number) =>
+  Math.max(JOURNEY_MIN_TIME, JOURNEY_BASE_TIME - 3 * (level - 1));
 
 export default function SinglePlayerPage() {
   const router = useRouter();
@@ -27,8 +40,12 @@ export default function SinglePlayerPage() {
   const [gameState, setGameState] = useState<GameState>(() => ({ ...createInitialGameState(), nextPiece: null }));
   const [runId, setRunId] = useState<bigint | null>(null);
   const [showContinueModal, setShowContinueModal] = useState(false);
-  const [showGetMyuDialog, setShowGetMyuDialog] = useState(false);
   const [lastSnapshot, setLastSnapshot] = useState<BoardSnapshot | null>(null);
+  const [mode, setMode] = useState<PlayMode | null>(null);
+  const [runNonce, setRunNonce] = useState(0);
+  const [levelDeadline, setLevelDeadline] = useState<number | null>(null);
+  const [nowTick, setNowTick] = useState(Date.now());
+  const [mintUnlocked, setMintUnlocked] = useState(false);
   const gameLoopRef = useRef<number | null>(null);
   const { sendTransactionAsync } = useSendTransaction();
   const { isEarthen, cellStyle } = useGameTheme();
@@ -64,25 +81,30 @@ export default function SinglePlayerPage() {
     if (stage > prevStageRef.current) {
       setClearedStageBanner(prevStageRef.current);
       prevStageRef.current = stage;
+      // Journey milestone: clearing a stage (100 lines) unlocks the NFT mint
+      if (mode === 'journey') setMintUnlocked(true);
       const t = setTimeout(() => setClearedStageBanner(null), 2500);
       return () => clearTimeout(t);
     }
     prevStageRef.current = stage;
-  }, [stage]);
+  }, [stage, mode]);
 
   // Start a fresh run (server deactivates any previous active run for this wallet)
   const startNewRun = useCallback(() => {
     setGameState(spawnNewPiece(createInitialGameState()));
     setLastSnapshot(null);
     setShowContinueModal(false);
+    setMintUnlocked(false);
+    setRunNonce((n) => n + 1);
     if (connection && address) {
       const emptyBoard = JSON.stringify(Array(20).fill(Array(10).fill(null)));
       connection.reducers.startSingleRun(address.toLowerCase(), emptyBoard, 1);
     }
   }, [connection, address]);
 
-  // Initialize game and track run ID
+  // Initialize game once a mode is chosen, and track run IDs
   useEffect(() => {
+    if (mode === null) return;
     if (connection && address) {
       // Listen for new game runs for this wallet
       const handleRunInsert = (_ctx: unknown, newRun: { runId: bigint; wallet: string }) => {
@@ -97,8 +119,32 @@ export default function SinglePlayerPage() {
       };
     }
     // No connection yet — still let the player play locally
-    setGameState(spawnNewPiece(createInitialGameState()));
-  }, [connection, address, startNewRun]);
+    startNewRun();
+  }, [mode, connection, address, startNewRun]);
+
+  // Journey level timer: fresh budget on each new level (or new run/continue)
+  useEffect(() => {
+    if (mode !== 'journey' || gameState.gameOver || gameState.isPaused) return;
+    setLevelDeadline(Date.now() + levelTimeBudget(gameState.level) * 1000);
+  }, [mode, gameState.level, gameState.isPaused, runNonce, gameState.gameOver]);
+
+  useEffect(() => {
+    if (mode !== 'journey' || levelDeadline === null || gameState.gameOver) return;
+    const t = setInterval(() => setNowTick(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [mode, levelDeadline, gameState.gameOver]);
+
+  useEffect(() => {
+    if (mode !== 'journey' || levelDeadline === null || gameState.gameOver || gameState.isPaused) return;
+    if (nowTick >= levelDeadline) {
+      setGameState((prev) => ({ ...prev, gameOver: true }));
+    }
+  }, [mode, levelDeadline, nowTick, gameState.gameOver, gameState.isPaused]);
+
+  const journeyTimeLeft =
+    mode === 'journey' && levelDeadline !== null && !gameState.gameOver
+      ? Math.max(0, Math.ceil((levelDeadline - nowTick) / 1000))
+      : null;
 
   // Game over: snapshot the board, record the score, and prompt to continue
   useEffect(() => {
@@ -290,10 +336,48 @@ export default function SinglePlayerPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-blue-950 px-4 py-8 pt-16">
+      {/* Per-stage backdrop + music (files load as they're produced) */}
+      <StageAmbience stage={stage} isEarthen={isEarthen} />
+
       {/* In-Game Music Controls */}
       <InGameMusicControls onNextTrack={handleNextTrack} />
-      
-      <div className="max-w-7xl mx-auto">
+
+      {/* Mode chooser — shown until the player picks how to play */}
+      {mode === null && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4">
+          <Card className="w-full max-w-lg bg-gray-900 border-purple-500 p-4 sm:p-6 space-y-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-purple-400 text-center">Choose Your Game</h2>
+            <button
+              onClick={() => setMode('free')}
+              className="w-full text-left rounded-lg border-2 border-cyan-500/60 hover:border-cyan-400 bg-black/60 p-4 transition-all"
+            >
+              <p className="font-bold text-cyan-400 flex items-center gap-2 text-base sm:text-lg">
+                <InfinityIcon className="h-5 w-5" aria-hidden="true" /> Free Play
+              </p>
+              <p className="text-sm text-gray-300 mt-1">
+                No timer, no pressure. The run only ends when there&apos;s no room left for pieces.
+              </p>
+            </button>
+            <button
+              onClick={() => setMode('journey')}
+              className="w-full text-left rounded-lg border-2 border-yellow-500/60 hover:border-yellow-400 bg-black/60 p-4 transition-all"
+            >
+              <p className="font-bold text-yellow-400 flex items-center gap-2 text-base sm:text-lg">
+                <MapIcon className="h-5 w-5" aria-hidden="true" /> Journey
+              </p>
+              <p className="text-sm text-gray-300 mt-1">
+                Beat the clock through 10-line levels and 10-level stages — each level faster and
+                shorter on time. Clear Stage 1 (100 lines) to unlock the collector&apos;s NFT mint.
+              </p>
+            </button>
+            <Button variant="outline" onClick={() => router.push('/')} className="w-full">
+              Back to Menu
+            </Button>
+          </Card>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="flex flex-col md:flex-row gap-6">
           {/* Game Board */}
           <div className="flex-1">
@@ -304,7 +388,14 @@ export default function SinglePlayerPage() {
                 </Button>
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-purple-400">SHOOTRIS</h2>
-                  <p className="text-xs text-gray-400">Pieces Rise from Bottom</p>
+                  <p className="text-xs text-gray-400">
+                    {mode === 'journey' ? 'Journey' : 'Free Play'} — Pieces Rise from Bottom
+                  </p>
+                  {journeyTimeLeft !== null && (
+                    <p className={`text-2xl font-black ${journeyTimeLeft <= 10 ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {journeyTimeLeft}s
+                    </p>
+                  )}
                 </div>
                 <div className="w-20" />
               </div>
@@ -359,6 +450,25 @@ export default function SinglePlayerPage() {
                 </p>
               )}
             </Card>
+
+            {/* Journey milestone: stage cleared → NFT mint unlocked */}
+            {mintUnlocked && (
+              <Card className="bg-black/80 border-yellow-500 p-4">
+                <p className="font-bold text-yellow-400 flex items-center gap-2">
+                  <Award className="h-5 w-5" aria-hidden="true" /> STAGE CONQUERED
+                </p>
+                <p className="text-sm text-gray-300 mt-1">
+                  100 lines cleared — collector&apos;s NFT mint unlocked.
+                </p>
+                {process.env.NEXT_PUBLIC_MILESTONE_NFT_URL ? (
+                  <a href={process.env.NEXT_PUBLIC_MILESTONE_NFT_URL} target="_blank" rel="noopener noreferrer">
+                    <Button className="w-full mt-2 bg-yellow-600 hover:bg-yellow-700">Mint Your NFT</Button>
+                  </a>
+                ) : (
+                  <p className="text-xs text-gray-500 mt-2">Mint page coming soon.</p>
+                )}
+              </Card>
+            )}
 
             {/* Hold Piece */}
             <Card className="bg-black/80 border-yellow-500/50 p-4">
@@ -425,7 +535,7 @@ export default function SinglePlayerPage() {
 
       {/* Continue Modal */}
       <Dialog open={showContinueModal} onOpenChange={setShowContinueModal}>
-        <DialogContent className="bg-gray-900 border-purple-500">
+        <DialogContent className="bg-gray-900 border-purple-500 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl text-purple-400">Game Over!</DialogTitle>
             <DialogDescription className="text-gray-300">
@@ -438,21 +548,39 @@ export default function SinglePlayerPage() {
                 Continue from just before you failed for <span className="text-green-400 font-bold">{CONTINUE_PRICE_MYU} $MYU</span> on Base?
               </p>
             ) : (
-              <p className="text-center text-gray-300">
-                Connect a wallet to use <span className="text-green-400 font-bold">$MYU</span> continues and save your scores.
-              </p>
+              <div className="space-y-3">
+                <p className="text-center text-gray-300">
+                  Connect a wallet to use <span className="text-green-400 font-bold">$MYU</span> continues and save your scores.
+                </p>
+                <div className="flex justify-center">
+                  <Wallet>
+                    <ConnectWallet className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold px-6 py-3 rounded-lg" />
+                  </Wallet>
+                </div>
+              </div>
             )}
-            {MYU_CONFIGURED && myuBalance !== undefined && (
+            {address && MYU_CONFIGURED && myuBalance !== undefined && (
               <p className="text-center text-sm text-gray-300">
                 Your balance: <span className={hasEnoughMyu ? 'text-cyan-400 font-bold' : 'text-red-400 font-bold'}>
                   {Number(myuBalance) / 10 ** MYU_DECIMALS} $MYU
                 </span>
               </p>
             )}
-            {MYU_CONFIGURED && !hasEnoughMyu && (
-              <p className="text-center text-sm text-yellow-400">
-                Not enough $MYU — swap ETH or other tokens for $MYU without leaving the game.
-              </p>
+            {/* Not enough MYU? Swap for it right here in the modal */}
+            {address && MYU_CONFIGURED && !hasEnoughMyu && (
+              <div className="rounded-lg border border-cyan-500/40 p-2">
+                <p className="text-center text-sm text-yellow-400 mb-1">
+                  Not enough $MYU — swap for it right here:
+                </p>
+                <Swap onSuccess={() => refetchMyuBalance()}>
+                  <SwapAmountInput label="Sell" swappableTokens={SWAP_FROM_TOKENS} token={SWAP_FROM_TOKENS[0]} type="from" />
+                  <SwapToggleButton />
+                  <SwapAmountInput label="Buy" token={MYU_TOKEN} type="to" />
+                  <SwapButton />
+                  <SwapMessage />
+                  <SwapToast />
+                </Swap>
+              </div>
             )}
             <p className="text-xs text-gray-400 text-center">
               All purchases are final. Completing payment implies acceptance of the Terms of Service.
@@ -465,28 +593,15 @@ export default function SinglePlayerPage() {
             <Button variant="outline" onClick={startNewRun} className="w-full sm:w-auto border-purple-500 text-purple-400">
               New Game
             </Button>
-            {address && (hasEnoughMyu ? (
+            {address && hasEnoughMyu && (
               <Button onClick={handlePayAndContinue} className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
                 Pay {CONTINUE_PRICE_MYU} $MYU & Continue
               </Button>
-            ) : (
-              <Button onClick={() => setShowGetMyuDialog(true)} className="w-full sm:w-auto bg-cyan-600 hover:bg-cyan-700">
-                Get $MYU
-              </Button>
-            ))}
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Buy MYU via in-app swap */}
-      <GetMyuDialog
-        open={showGetMyuDialog}
-        onOpenChange={setShowGetMyuDialog}
-        onSwapSuccess={() => {
-          refetchMyuBalance();
-          setShowGetMyuDialog(false);
-        }}
-      />
     </div>
   );
 }
