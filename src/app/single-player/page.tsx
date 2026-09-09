@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSpacetimeDB } from '@/lib/spacetime/hooks';
 import { createInitialGameState, spawnNewPiece, movePieceUp, movePieceLeft, movePieceRight, rotatePieceAction, hardLaunchUp, holdPiece, createBoardSnapshot, restoreFromSnapshot, getStage, getLevelInStage } from '@/lib/tetris/game-engine';
-import { LEVELS_PER_STAGE } from '@/lib/tetris/types';
+import { LEVELS_PER_STAGE, BOARD_HEIGHT } from '@/lib/tetris/types';
+import { useGameTheme } from '@/lib/theme';
 import type { GameState, BoardSnapshot } from '@/lib/tetris/types';
 import { PAYOUT_SPLIT_ADDRESS, MYU_TOKEN_ADDRESS, MYU_DECIMALS, CONTINUE_PRICE_MYU, MYU_CONFIGURED } from '@/app/config/onchainkit';
 import { parseUnits, encodeFunctionData, erc20Abi } from 'viem';
@@ -21,13 +22,28 @@ export default function SinglePlayerPage() {
   const router = useRouter();
   const { address } = useAccount();
   const { connection, player } = useSpacetimeDB(address || null);
-  const [gameState, setGameState] = useState<GameState>(createInitialGameState());
+  // Deterministic first render (no random piece) so SSR and client match;
+  // the mount effect spawns the real random state client-side.
+  const [gameState, setGameState] = useState<GameState>(() => ({ ...createInitialGameState(), nextPiece: null }));
   const [runId, setRunId] = useState<bigint | null>(null);
   const [showContinueModal, setShowContinueModal] = useState(false);
   const [showGetMyuDialog, setShowGetMyuDialog] = useState(false);
   const [lastSnapshot, setLastSnapshot] = useState<BoardSnapshot | null>(null);
   const gameLoopRef = useRef<number | null>(null);
   const { sendTransactionAsync } = useSendTransaction();
+  const { isEarthen, cellStyle } = useGameTheme();
+
+  // Line-clear animation rows (retriggered by the engine's clearEvent counter)
+  const [animRows, setAnimRows] = useState<number[]>([]);
+  const lastClearEventRef = useRef(0);
+  useEffect(() => {
+    if (gameState.clearEvent > lastClearEventRef.current) {
+      lastClearEventRef.current = gameState.clearEvent;
+      setAnimRows(gameState.lastClearedRows);
+      const t = setTimeout(() => setAnimRows([]), 900);
+      return () => clearTimeout(t);
+    }
+  }, [gameState.clearEvent, gameState.lastClearedRows]);
 
   const continuePrice = parseUnits(CONTINUE_PRICE_MYU, MYU_DECIMALS);
   const { data: myuBalance, refetch: refetchMyuBalance } = useReadContract({
@@ -255,16 +271,7 @@ export default function SinglePlayerPage() {
     return board.slice().reverse().map((row, y) => (
       <div key={y} className="flex" style={{ height: '24px' }}>
         {row.map((cell, x) => (
-          <div
-            key={x}
-            className="relative"
-            style={{
-              width: '24px',
-              height: '24px',
-              backgroundColor: cell || '#000',
-              boxShadow: cell ? `0 0 8px ${cell}, inset 0 0 8px ${cell}` : 'none',
-            }}
-          >
+          <div key={x} className="relative" style={cellStyle(cell, 24)}>
             {/* Thin grid line */}
             <div className="absolute inset-0 border border-cyan-900/20" />
           </div>
@@ -303,8 +310,15 @@ export default function SinglePlayerPage() {
               </div>
 
               <div className="flex justify-center">
-                <div className="inline-block border-4 border-cyan-500 rounded" style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.2)' }}>
+                <div className="inline-block relative border-4 border-cyan-500 rounded" style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.2)' }}>
                   {renderBoard()}
+                  {animRows.map((y) => (
+                    <div
+                      key={`clear-${lastClearEventRef.current}-${y}`}
+                      className={isEarthen ? 'line-clear-earthen' : 'line-clear-neon'}
+                      style={{ top: `${(BOARD_HEIGHT - 1 - y) * 24}px`, height: '24px' }}
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -358,12 +372,7 @@ export default function SinglePlayerPage() {
                           <div
                             key={x}
                             className="relative"
-                            style={{
-                              width: '24px',
-                              height: '24px',
-                              backgroundColor: cell ? gameState.heldPiece!.color : '#000',
-                              boxShadow: cell ? `0 0 8px ${gameState.heldPiece!.color}` : 'none',
-                            }}
+                            style={cellStyle(cell ? gameState.heldPiece!.color : null, 24)}
                           >
                             <div className="absolute inset-0 border border-cyan-900/20" />
                           </div>
@@ -389,12 +398,7 @@ export default function SinglePlayerPage() {
                           <div
                             key={x}
                             className="relative"
-                            style={{
-                              width: '24px',
-                              height: '24px',
-                              backgroundColor: cell ? gameState.nextPiece!.color : '#000',
-                              boxShadow: cell ? `0 0 8px ${gameState.nextPiece!.color}` : 'none',
-                            }}
+                            style={cellStyle(cell ? gameState.nextPiece!.color : null, 24)}
                           >
                             <div className="absolute inset-0 border border-cyan-900/20" />
                           </div>

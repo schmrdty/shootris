@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { createInitialGameState, spawnNewPiece, movePieceUp, movePieceLeft, movePieceRight, rotatePieceAction, hardLaunchUp } from '@/lib/tetris/game-engine';
 import type { GameState } from '@/lib/tetris/types';
+import { useGameTheme } from '@/lib/theme';
 
 interface MicroShootrisProps {
   onClose: () => void;
@@ -12,8 +13,10 @@ interface MicroShootrisProps {
 }
 
 export default function MicroShootris({ onClose, matchFound }: MicroShootrisProps) {
-  const [gameState, setGameState] = useState<GameState>(createInitialGameState());
+  // Deterministic first render (no random piece) so SSR and client match
+  const [gameState, setGameState] = useState<GameState>(() => ({ ...createInitialGameState(), nextPiece: null }));
   const gameLoopRef = useRef<number | null>(null);
+  const { cellStyle } = useGameTheme();
 
   useEffect(() => {
     const newState = spawnNewPiece(createInitialGameState());
@@ -111,16 +114,7 @@ export default function MicroShootris({ onClose, matchFound }: MicroShootrisProp
     return board.slice().reverse().map((row, y) => (
       <div key={y} className="flex" style={{ height: '13px' }}>
         {row.map((cell, x) => (
-          <div
-            key={x}
-            className="relative"
-            style={{
-              width: '13px',
-              height: '13px',
-              backgroundColor: cell || '#000',
-              boxShadow: cell ? `0 0 4px ${cell}` : 'none',
-            }}
-          >
+          <div key={x} className="relative" style={cellStyle(cell, 13)}>
             <div className="absolute inset-0 border border-cyan-900/20" />
           </div>
         ))}

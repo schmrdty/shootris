@@ -22,6 +22,7 @@ import { BOARD_WIDTH, BOARD_HEIGHT, OBSTACLE_BAND_HEIGHT } from '@/lib/tetris/ty
 import type { PvpMatch } from '@/spacetime_module_bindings';
 import { InGameMusicControls } from '@/components/InGameMusicControls';
 import { Trophy, Skull } from 'lucide-react';
+import { useGameTheme } from '@/lib/theme';
 
 const OBSTACLE_COLOR = '#6b7280';
 const OBSTACLE_START_ROW = 12;
@@ -76,11 +77,25 @@ export default function PvpPlayPage() {
   }, [params.matchId]);
 
   const [match, setMatch] = useState<PvpMatch | null>(null);
-  const [gameState, setGameState] = useState<GameState>(createInitialGameState());
+  // Deterministic first render (no random piece) so SSR and client match
+  const [gameState, setGameState] = useState<GameState>(() => ({ ...createInitialGameState(), nextPiece: null }));
   const [initialized, setInitialized] = useState(false);
   const [now, setNow] = useState(Date.now());
   const gameLoopRef = useRef<number | null>(null);
   const stateRef = useRef(gameState);
+  const { isEarthen, cellStyle } = useGameTheme();
+
+  // Line-clear animation rows (retriggered by the engine's clearEvent counter)
+  const [animRows, setAnimRows] = useState<number[]>([]);
+  const lastClearEventRef = useRef(0);
+  useEffect(() => {
+    if (gameState.clearEvent > lastClearEventRef.current) {
+      lastClearEventRef.current = gameState.clearEvent;
+      setAnimRows(gameState.lastClearedRows);
+      const t = setTimeout(() => setAnimRows([]), 900);
+      return () => clearTimeout(t);
+    }
+  }, [gameState.clearEvent, gameState.lastClearedRows]);
   const matchRef = useRef<PvpMatch | null>(null);
   const completedRef = useRef(false);
   const expiryHandledRef = useRef(false);
@@ -314,16 +329,7 @@ export default function PvpPlayPage() {
       .map((row, y) => (
         <div key={y} className="flex" style={{ height: `${cellSize}px` }}>
           {row.map((cell, x) => (
-            <div
-              key={x}
-              className="relative"
-              style={{
-                width: `${cellSize}px`,
-                height: `${cellSize}px`,
-                backgroundColor: cell || '#000',
-                boxShadow: cell ? `0 0 ${cellSize / 3}px ${cell}, inset 0 0 ${cellSize / 3}px ${cell}` : 'none',
-              }}
-            >
+            <div key={x} className="relative" style={cellStyle(cell, cellSize)}>
               <div className="absolute inset-0 border border-cyan-900/20" />
             </div>
           ))}
@@ -425,10 +431,17 @@ export default function PvpPlayPage() {
               </div>
               <div className="flex justify-center">
                 <div
-                  className="inline-block border-4 border-cyan-500 rounded"
+                  className="inline-block relative border-4 border-cyan-500 rounded"
                   style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.2)' }}
                 >
                   {renderBoard(gameState.board, 24)}
+                  {animRows.map((y) => (
+                    <div
+                      key={`clear-${lastClearEventRef.current}-${y}`}
+                      className={isEarthen ? 'line-clear-earthen' : 'line-clear-neon'}
+                      style={{ top: `${(BOARD_HEIGHT - 1 - y) * 24}px`, height: '24px' }}
+                    />
+                  ))}
                 </div>
               </div>
               {gameState.gameOver && !matchCompleted && (
@@ -494,15 +507,7 @@ export default function PvpPlayPage() {
                     {gameState.nextPiece.shape.map((row, y) => (
                       <div key={y} className="flex" style={{ height: '20px' }}>
                         {row.map((cell, x) => (
-                          <div
-                            key={x}
-                            style={{
-                              width: '20px',
-                              height: '20px',
-                              backgroundColor: cell ? gameState.nextPiece!.color : '#000',
-                              boxShadow: cell ? `0 0 6px ${gameState.nextPiece!.color}` : 'none',
-                            }}
-                          />
+                          <div key={x} style={cellStyle(cell ? gameState.nextPiece!.color : null, 20)} />
                         ))}
                       </div>
                     ))}

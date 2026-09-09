@@ -19,6 +19,8 @@ export function createInitialGameState(): GameState {
     gameOver: false,
     isPaused: false,
     moveSpeed: INITIAL_MOVE_SPEED,
+    lastClearedRows: [],
+    clearEvent: 0,
   };
 }
 
@@ -243,7 +245,7 @@ function lockPiece(state: GameState): GameState {
   }
 
   // Check for completed lines
-  const { board: clearedBoard, linesCleared } = clearLines(newBoard);
+  const { board: clearedBoard, linesCleared, clearedRows } = clearLines(newBoard);
   
   const newLines = state.lines + linesCleared;
   const newLevel = Math.floor(newLines / LINES_PER_LEVEL) + 1;
@@ -266,6 +268,8 @@ function lockPiece(state: GameState): GameState {
     board: stageCleared ? createEmptyBoard() : clearedBoard,
     currentPiece: null,
     lines: newLines,
+    lastClearedRows: clearedRows,
+    clearEvent: linesCleared > 0 ? state.clearEvent + 1 : state.clearEvent,
     level: newLevel,
     moveSpeed: newMoveSpeed,
     score: newScore,
@@ -274,13 +278,13 @@ function lockPiece(state: GameState): GameState {
   return spawnNewPiece(newState);
 }
 
-function clearLines(board: (string | null)[][]): { board: (string | null)[][]; linesCleared: number } {
+function clearLines(board: (string | null)[][]): { board: (string | null)[][]; linesCleared: number; clearedRows: number[] } {
   const newBoard = [];
-  let linesCleared = 0;
+  const clearedRows: number[] = [];
 
   for (let y = 0; y < BOARD_HEIGHT; y++) {
     if (board[y].every(cell => cell !== null)) {
-      linesCleared++;
+      clearedRows.push(y);
     } else {
       newBoard.push([...board[y]]);
     }
@@ -291,7 +295,7 @@ function clearLines(board: (string | null)[][]): { board: (string | null)[][]; l
     newBoard.unshift(Array(BOARD_WIDTH).fill(null));
   }
 
-  return { board: newBoard, linesCleared };
+  return { board: newBoard, linesCleared: clearedRows.length, clearedRows };
 }
 
 // Stage helpers for UI display

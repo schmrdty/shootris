@@ -21,6 +21,10 @@ export interface GameState {
   gameOver: boolean;
   isPaused: boolean;
   moveSpeed: number;
+  /** Row indices cleared by the most recent lock (for clear animations). */
+  lastClearedRows: number[];
+  /** Monotonic counter bumped whenever lines clear, so the UI can retrigger. */
+  clearEvent: number;
 }
 
 export interface PvpGameState {

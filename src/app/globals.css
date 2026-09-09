@@ -68,9 +68,166 @@
 
   /* Grid pattern background */
   .grid-pattern {
-    background-image: 
+    background-image:
       linear-gradient(rgba(0, 240, 255, 0.1) 1px, transparent 1px),
       linear-gradient(90deg, rgba(0, 240, 255, 0.1) 1px, transparent 1px);
     background-size: 20px 20px;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EARTHEN THEME (light mode) — moss, clay, sandstone, mycelium.
+   Neon is the default; html[data-theme="earthen"] flips the app light.
+   The dark Tailwind utilities used throughout the app are remapped here
+   so every page inherits the theme without per-page rewrites.
+   ═══════════════════════════════════════════════════════════════════ */
+
+html[data-theme="earthen"] {
+  --background: 40 35% 92%;
+  --foreground: 30 25% 16%;
+  --card: 42 40% 96%;
+  --card-foreground: 30 25% 16%;
+  --popover: 42 40% 96%;
+  --popover-foreground: 30 25% 16%;
+  --primary: 88 28% 40%;
+  --primary-foreground: 42 40% 96%;
+  --secondary: 24 45% 45%;
+  --secondary-foreground: 42 40% 96%;
+  --muted: 40 25% 85%;
+  --muted-foreground: 30 15% 40%;
+  --accent: 16 55% 48%;
+  --accent-foreground: 42 40% 96%;
+  --border: 33 25% 60%;
+  --input: 33 25% 70%;
+  --ring: 88 28% 40%;
+}
+
+html[data-theme="earthen"] body {
+  background: linear-gradient(150deg, #ece4d0 0%, #e2d6bd 45%, #d8cbae 100%);
+  color: hsl(var(--foreground));
+}
+
+/* Page-root gradients (set inline or via Tailwind) go parchment */
+html[data-theme="earthen"] .min-h-screen {
+  background: linear-gradient(150deg, #ece4d0 0%, #e2d6bd 45%, #d8cbae 100%) !important;
+}
+
+/* Soften the neon text glows into earth pigments */
+html[data-theme="earthen"] .neon-cyan { text-shadow: 0 1px 2px rgba(85, 122, 70, 0.35); }
+html[data-theme="earthen"] .neon-purple { text-shadow: 0 1px 2px rgba(154, 95, 143, 0.35); }
+html[data-theme="earthen"] .neon-pink { text-shadow: 0 1px 2px rgba(168, 73, 47, 0.35); }
+html[data-theme="earthen"] .neon-yellow { text-shadow: 0 1px 2px rgba(198, 138, 63, 0.35); }
+
+html[data-theme="earthen"] .grid-pattern {
+  background-image:
+    linear-gradient(rgba(90, 70, 45, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(90, 70, 45, 0.08) 1px, transparent 1px);
+}
+
+/* Dark surfaces → parchment cards (kills their inline neon box-shadows too) */
+html[data-theme="earthen"] .bg-black\/90,
+html[data-theme="earthen"] .bg-black\/80,
+html[data-theme="earthen"] .bg-black\/70,
+html[data-theme="earthen"] .bg-black\/50,
+html[data-theme="earthen"] .bg-gray-900,
+html[data-theme="earthen"] .bg-gray-900\/50 {
+  background-color: rgba(248, 243, 229, 0.92) !important;
+  background-image: none !important;
+  box-shadow: 0 3px 12px rgba(70, 55, 35, 0.25) !important;
+}
+html[data-theme="earthen"] .bg-gray-800\/50 { background-color: rgba(230, 221, 200, 0.9) !important; }
+html[data-theme="earthen"] [class*="bg-gradient-to-br"] {
+  background-image: none !important;
+  background-color: rgba(248, 243, 229, 0.92) !important;
+}
+
+/* Text remap: light-on-dark → soil pigments on parchment */
+html[data-theme="earthen"] .text-white { color: #2c2418 !important; }
+html[data-theme="earthen"] .text-gray-300 { color: #4a4132 !important; }
+html[data-theme="earthen"] .text-gray-400 { color: #5c523f !important; }
+html[data-theme="earthen"] .text-gray-500 { color: #6b6150 !important; }
+html[data-theme="earthen"] .text-cyan-300, html[data-theme="earthen"] .text-cyan-400 { color: #45663c !important; }
+html[data-theme="earthen"] .text-purple-300, html[data-theme="earthen"] .text-purple-400 { color: #7d4a72 !important; }
+html[data-theme="earthen"] .text-yellow-300, html[data-theme="earthen"] .text-yellow-400 { color: #9c7222 !important; }
+html[data-theme="earthen"] .text-blue-400 { color: #4d6270 !important; }
+html[data-theme="earthen"] .text-green-400 { color: #4b6b38 !important; }
+html[data-theme="earthen"] .text-pink-200, html[data-theme="earthen"] .text-pink-300 { color: #96513b !important; }
+html[data-theme="earthen"] .text-red-400 { color: #953b24 !important; }
+html[data-theme="earthen"] .text-cyan-200, html[data-theme="earthen"] .text-purple-200,
+html[data-theme="earthen"] .text-yellow-200 { color: #55492f !important; }
+
+/* Borders: neon strokes → natural materials */
+html[data-theme="earthen"] .border-cyan-400, html[data-theme="earthen"] .border-cyan-500,
+html[data-theme="earthen"] .border-cyan-500\/50, html[data-theme="earthen"] .border-cyan-600\/60 { border-color: #7c9a5a !important; }
+html[data-theme="earthen"] .border-purple-500, html[data-theme="earthen"] .border-purple-500\/50 { border-color: #9a5f8f !important; }
+html[data-theme="earthen"] .border-yellow-500, html[data-theme="earthen"] .border-yellow-500\/50 { border-color: #c68a3f !important; }
+html[data-theme="earthen"] .border-blue-500\/50 { border-color: #5e6f7b !important; }
+html[data-theme="earthen"] .border-green-500, html[data-theme="earthen"] .border-green-500\/50 { border-color: #557a46 !important; }
+html[data-theme="earthen"] .border-pink-500, html[data-theme="earthen"] .border-pink-500\/50 { border-color: #a8492f !important; }
+html[data-theme="earthen"] .border-red-500 { border-color: #953b24 !important; }
+html[data-theme="earthen"] .border-gray-700, html[data-theme="earthen"] .border-gray-700\/60,
+html[data-theme="earthen"] .border-gray-800 { border-color: #b3a688 !important; }
+html[data-theme="earthen"] .border-cyan-900\/20 { border-color: rgba(92, 72, 45, 0.16) !important; }
+
+/* The game board frame trades neon glow for carved wood */
+html[data-theme="earthen"] .inline-block.border-4 {
+  box-shadow: 0 4px 16px rgba(60, 45, 25, 0.45), inset 0 0 10px rgba(60, 45, 25, 0.2) !important;
+}
+
+/* ── Line-clear animations ─────────────────────────────────────────── */
+
+/* Neon: a laser sweeps across the cleared row and it vanishes */
+@keyframes laser-flash {
+  0% { transform: scaleX(0); opacity: 1; }
+  55% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+.line-clear-neon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 10;
+  background: linear-gradient(90deg, transparent, #9ffcff 12%, #ffffff 50%, #9ffcff 88%, transparent);
+  box-shadow: 0 0 16px #00f0ff, 0 0 32px #00f0ff;
+  transform-origin: left center;
+  animation: laser-flash 0.45s ease-out forwards;
+}
+
+/* Earthen: mycelium threads over the row, then it dissolves into the soil */
+@keyframes mycelium-grow {
+  0% {
+    opacity: 0;
+    background-size: 5px 5px, 12px 12px, 8px 8px;
+    filter: blur(0.4px);
+    clip-path: inset(0 100% 0 0);
+  }
+  30% {
+    opacity: 0.95;
+    clip-path: inset(0 0 0 0);
+  }
+  65% {
+    opacity: 0.9;
+    background-size: 16px 16px, 28px 28px, 20px 20px;
+    filter: blur(0.8px);
+  }
+  100% {
+    opacity: 0;
+    background-size: 26px 26px, 42px 42px, 32px 32px;
+    filter: blur(2.4px);
+  }
+}
+.line-clear-earthen {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 10;
+  background-color: rgba(238, 233, 218, 0.55);
+  background-image:
+    radial-gradient(circle, rgba(246, 248, 238, 0.95) 1px, transparent 2px),
+    radial-gradient(circle, rgba(210, 224, 195, 0.85) 2px, transparent 3px),
+    radial-gradient(circle, rgba(255, 255, 248, 0.9) 1px, transparent 2px);
+  background-position: 0 30%, 6px 65%, 3px 10%;
+  animation: mycelium-grow 0.8s ease-in-out forwards;
 }

@@ -7,12 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useSpacetimeDB } from '@/lib/spacetime/hooks';
+import { useGameTheme } from '@/lib/theme';
 import Link from 'next/link';
+import { Sprout, Zap } from 'lucide-react';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { address } = useAccount();
   const { connection, player } = useSpacetimeDB(address || null);
+  const { theme, setTheme, isEarthen } = useGameTheme();
 
   const handleMusicToggle = (enabled: boolean) => {
     if (!connection || !address) return;
@@ -28,6 +31,33 @@ export default function SettingsPage() {
           </Button>
           <h1 className="text-3xl font-bold text-purple-400">Settings</h1>
         </div>
+
+        <Card className="bg-black/80 border-green-500/50">
+          <CardHeader>
+            <CardTitle className="text-xl text-green-400">Appearance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="theme-toggle" className="text-base flex items-center gap-2">
+                  {isEarthen ? <Sprout className="h-4 w-4" aria-hidden="true" /> : <Zap className="h-4 w-4" aria-hidden="true" />}
+                  {isEarthen ? 'Earthen (light)' : 'Neon (dark)'}
+                </Label>
+                <p className="text-sm text-gray-400">
+                  Neon: lasers and glow in the dark. Earthen: moss, clay, and mycelium in the light.
+                </p>
+              </div>
+              <Switch
+                id="theme-toggle"
+                checked={isEarthen}
+                onCheckedChange={(on) => setTheme(on ? 'earthen' : 'neon')}
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Current theme: {theme}. Saved on this device — no wallet needed.
+            </p>
+          </CardContent>
+        </Card>
 
         <Card className="bg-black/80 border-purple-500/50">
           <CardHeader>

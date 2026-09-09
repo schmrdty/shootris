@@ -7,6 +7,7 @@ import { WagmiProvider, createConfig, http } from 'wagmi';
 import { coinbaseWallet } from 'wagmi/connectors';
 import { base } from 'wagmi/chains';
 import { ONCHAINKIT_API_KEY, ONCHAINKIT_PROJECT_ID } from './config/onchainkit';
+import { GameThemeProvider } from '@/lib/theme';
 
 const wagmiConfig = createConfig({
   chains: [base],
@@ -51,7 +52,7 @@ export function Providers({ children }: { children: ReactNode }) {
             },
           }}
         >
-          {children}
+          <GameThemeProvider>{children}</GameThemeProvider>
         </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
