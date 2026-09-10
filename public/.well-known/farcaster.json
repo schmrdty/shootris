@@ -1,22 +1,23 @@
 {
   "miniapp": {
     "version": "1",
-    "name": "Shootr1s",
-    "iconUrl": "https://bafybeigkkszqugfhb7v3znd2cib4xcxu7e6funfi2xx3ntjup3v24ybv2e.ipfs.w3s.link/shootris.png",
+    "name": "Shootris",
+    "iconUrl": "https://shootris.schmidtiest.xyz/brand/icon-512.png",
     "homeUrl": "https://shootris.schmidtiest.xyz",
-    "imageUrl": "https://bafybeigkkszqugfhb7v3znd2cib4xcxu7e6funfi2xx3ntjup3v24ybv2e.ipfs.w3s.link/shootris.png",
+    "imageUrl": "https://shootris.schmidtiest.xyz/brand/og.png",
     "buttonTitle": "Play Shootris",
-    "splashImageUrl": "https://usdozf7pplhxfvrl.public.blob.vercel-storage.com/farcaster/splash_images/splash_image1.svg",
-    "splashBackgroundColor": "#000000",
+    "splashImageUrl": "https://shootris.schmidtiest.xyz/brand/splash.png",
+    "splashBackgroundColor": "#0a0e27",
     "tags": [
-      "ohara",
+      "tetris",
+      "arcade",
+      "puzzle",
       "base",
-      "schmidtiest",
-      "farcaster"
+      "d3myur"
     ],
     "primaryCategory": "entertainment",
-    "ogTitle": "Shootris ",
-    "ogImageUrl": "https://bafybeigkkszqugfhb7v3znd2cib4xcxu7e6funfi2xx3ntjup3v24ybv2e.ipfs.w3s.link/shootris.png",
+    "ogTitle": "Shootris",
+    "ogImageUrl": "https://shootris.schmidtiest.xyz/brand/og.png",
     "supportedPlatforms": [
       "web",
       "farcaster",

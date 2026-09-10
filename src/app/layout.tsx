@@ -22,20 +22,29 @@ export default function RootLayout({
       );
 }
 
+const SITE = `https://${process.env.NEXT_PUBLIC_HOST || 'shootris.schmidtiest.xyz'}`;
+
 export const metadata: Metadata = {
+        metadataBase: new URL(SITE),
+        openGraph: {
+          title: "Shootris — Inverted Tetris",
+          description: "Blocks rise instead of fall. Solo journey, PvP duels, and $MYU continues.",
+          images: ["/brand/og.png"],
+        },
+        twitter: { card: "summary_large_image", images: ["/brand/og.png"] },
         title: "Shootris Inverted Tetris",
         description: "Experience an exciting twist on Tetris where blocks rise! Engage in solo play or PVP duels in a seamless, cross-platform mini-app. Spend $MYU to continue your run. Join now and defy gravity!",
         other: { "fc:frame": JSON.stringify({
           "version": "next",
-          "imageUrl": "https://bafybeigkkszqugfhb7v3znd2cib4xcxu7e6funfi2xx3ntjup3v24ybv2e.ipfs.dweb.link/shootris.png",
+          "imageUrl": `${SITE}/brand/og.png`,
           "button": {
             "title": "Play Shootris",
             "action": {
               "type": "launch_frame",
               "name": "Shootris Inverted Tetris",
-              "url": "https://shootris.schmidtiest.xyz",
-              "splashImageUrl": "https://usdozf7pplhxfvrl.public.blob.vercel-storage.com/farcaster/splash_images/splash_image1.svg",
-              "splashBackgroundColor": "#ffffff"
+              "url": SITE,
+              "splashImageUrl": `${SITE}/brand/splash.png`,
+              "splashBackgroundColor": "#0a0e27"
             }
           }
         }

@@ -99,15 +99,6 @@ export default function FarcasterToastManager({ children }: FarcasterToastManage
               >
                 Copy Again
               </button>
-              
-              <button
-                onClick={() => {
-                  window.open('https://ohara.ai/mini-apps/77f2a8e6-fce3-4263-bace-b5fcaf6be145/build', '_blank')
-                }}
-                className="bg-black hover:bg-gray-800 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
-              >
-                Back to Base App
-              </button>
             </div>
           </div>
         ),

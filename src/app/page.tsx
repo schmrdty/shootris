@@ -12,6 +12,7 @@ import { WalletConnect } from '@/components/wallet-connect';
 import { ShareOnFarcaster } from '@/components/ShareOnFarcaster';
 import { ChevronsUp, Gamepad2, Swords, Trophy, Settings, BookOpen, TriangleAlert } from 'lucide-react';
 import { SkinUnlockPrompt } from '@/components/SkinUnlockPrompt';
+import { ShootrisLogo } from '@/components/ShootrisLogo';
 
 export default function Home() {
   const { address, status } = useAccount();
@@ -54,7 +55,10 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-black to-blue-900 px-4">
         <Card className="w-full max-w-md bg-black/80 border-purple-500/50">
           <CardHeader>
-            <CardTitle className="text-2xl text-center text-purple-400">Shootris</CardTitle>
+            <CardTitle className="text-center">
+              <ShootrisLogo className="w-full max-w-[200px] h-auto mx-auto select-none" />
+              <span className="sr-only">Shootris</span>
+            </CardTitle>
             <CardDescription className="text-center">Preparing smart wallet...</CardDescription>
           </CardHeader>
         </Card>
@@ -79,8 +83,9 @@ export default function Home() {
         {/* Header */}
         <Card className="bg-black/90 border-4 border-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.5)]">
           <CardHeader>
-            <CardTitle className="text-4xl sm:text-6xl text-center font-black tracking-wider neon-cyan">
-              SHOOTRIS
+            <CardTitle className="text-center">
+              <ShootrisLogo priority />
+              <span className="sr-only">Shootris</span>
             </CardTitle>
             <CardDescription className="text-center text-sm sm:text-xl font-bold text-cyan-300 mt-3 sm:mt-4 tracking-wide flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
               <ChevronsUp className="h-4 w-4 sm:h-6 sm:w-6 shrink-0" aria-hidden="true" />
