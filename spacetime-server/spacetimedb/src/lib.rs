@@ -35,11 +35,10 @@ const STAGE_BONUS: u64 = 5000;
 // Max humanly plausible clear rate, with a small grace allowance
 const MAX_LINES_PER_SEC: i64 = 2;
 
-// The app server's SpacetimeDB identity (the account that publishes this
-// module). Only this identity may attest wallet bindings — the Next.js
-// server verifies the wallet's Ethereum signature (EOA and ERC-1271/6492
-// smart wallets) via RPC before calling admin_bind_wallet.
-const ADMIN_IDENTITY_HEX: &str = "c200e8bb42d1cb9144065511ee5e187567e0adc48f32f84bd551bfa0d3dc0531";
+// The database OWNER's identity — the account that publishes this module.
+// This is the root of trust and its token should never leave a trusted
+// machine, because that same token can republish or delete the database.
+const OWNER_IDENTITY_HEX: &str = "c200e8bb42d1cb9144065511ee5e187567e0adc48f32f84bd551bfa0d3dc0531";
 
 // =========================
 /**
@@ -188,6 +187,19 @@ pub struct PvpLeaderboard {
     updated_at: Timestamp,
 }
 
+// Least-privilege identity used by the public app server. It may ONLY
+// attest wallet bindings — it cannot publish, delete, or act on behalf of
+// players. Set with set_attestor (owner only) so it can be rotated without
+// republishing the module.
+#[table(name = app_config, public)]
+#[derive(Clone)]
+pub struct AppConfig {
+    #[primary_key]
+    id: u8, // always 0 — single row
+    attestor: Identity,
+    updated_at: Timestamp,
+}
+
 // Wallet <-> SpacetimeDB identity bindings, attested by the app server.
 // A caller may only mutate data for wallets whose binding matches ctx.sender.
 #[table(name = wallet_bindings, public)]
@@ -205,13 +217,27 @@ pub struct WalletBinding {
  */
 // =========================
 
-fn admin_identity() -> Identity {
-    Identity::from_hex(ADMIN_IDENTITY_HEX).expect("ADMIN_IDENTITY_HEX must be valid hex")
+fn owner_identity() -> Identity {
+    Identity::from_hex(OWNER_IDENTITY_HEX).expect("OWNER_IDENTITY_HEX must be valid hex")
+}
+
+/// The currently configured attestor, if one has been set.
+fn attestor_identity(ctx: &ReducerContext) -> Option<Identity> {
+    ctx.db.app_config().id().find(&0u8).map(|c| c.attestor)
+}
+
+/// May this caller attest wallet bindings? Owner (root of trust) or the
+/// configured attestor (the token that lives on the public app server).
+fn can_attest(ctx: &ReducerContext) -> bool {
+    ctx.sender == owner_identity()
+        || attestor_identity(ctx).map(|a| a == ctx.sender).unwrap_or(false)
 }
 
 // The caller's identity must be bound to `wallet` (or be the app server).
 fn require_bound(ctx: &ReducerContext, wallet: &str) -> Result<(), String> {
-    if ctx.sender == admin_identity() {
+    // Deliberately owner-only: the attestor may create bindings but must not
+    // be able to submit gameplay data as somebody else.
+    if ctx.sender == owner_identity() {
         return Ok(());
     }
     match ctx.db.wallet_bindings().wallet().find(&wallet.to_string()) {
@@ -315,10 +341,35 @@ fn default_duration_for(match_type: &MatchType) -> i64 {
 // Reducers: Wallet binding (app-server attested)
 // =========================
 
+/// Point the module at the app server's least-privilege identity.
+/// Owner only. Call it again at any time to rotate the attestor — for
+/// example if the public server is rebuilt or believed compromised:
+///   spacetime call shootris-game set_attestor '["<identity-hex>"]'
+#[reducer]
+pub fn set_attestor(ctx: &ReducerContext, identity_hex: String) -> Result<(), String> {
+    if ctx.sender != owner_identity() {
+        return Err("Only the database owner may set the attestor".into());
+    }
+    let identity = Identity::from_hex(identity_hex.trim())
+        .map_err(|e| format!("Invalid identity hex: {e}"))?;
+    if let Some(mut c) = ctx.db.app_config().id().find(&0u8) {
+        c.attestor = identity;
+        c.updated_at = ctx.timestamp;
+        ctx.db.app_config().id().update(c);
+    } else {
+        ctx.db.app_config().insert(AppConfig {
+            id: 0,
+            attestor: identity,
+            updated_at: ctx.timestamp,
+        });
+    }
+    Ok(())
+}
+
 #[reducer]
 pub fn admin_bind_wallet(ctx: &ReducerContext, wallet: String, identity_hex: String) -> Result<(), String> {
-    if ctx.sender != admin_identity() {
-        return Err("Only the app server may bind wallets".into());
+    if !can_attest(ctx) {
+        return Err("Only the owner or the configured attestor may bind wallets".into());
     }
     let wallet = wallet.trim().to_lowercase();
     if wallet.is_empty() {
@@ -798,7 +849,7 @@ pub fn complete_pvp_match(ctx: &ReducerContext, match_id: u64, winner_wallet: St
         };
         let caller_is_participant = sender_bound_to(&m.player1_wallet)
             || m.player2_wallet.as_ref().map(&sender_bound_to).unwrap_or(false);
-        if !caller_is_participant && ctx.sender != admin_identity() {
+        if !caller_is_participant && ctx.sender != owner_identity() {
             return Err("Caller is not a participant in this match".into());
         }
 

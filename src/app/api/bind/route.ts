@@ -42,11 +42,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    const token = process.env.SPACETIMEDB_ADMIN_TOKEN;
+    // Least-privilege attestor token. This identity can ONLY attest wallet
+    // bindings — it cannot publish or delete the database, so it is safe to
+    // keep on a public server. SPACETIMEDB_ADMIN_TOKEN is accepted as a
+    // legacy fallback but should be retired: that token owns the database.
+    const token = process.env.SPACETIMEDB_ATTESTOR_TOKEN || process.env.SPACETIMEDB_ADMIN_TOKEN;
     if (!token) {
       return NextResponse.json(
-        { error: 'Server not configured: SPACETIMEDB_ADMIN_TOKEN is missing' },
+        { error: 'Server not configured: SPACETIMEDB_ATTESTOR_TOKEN is missing' },
         { status: 500 }
+      );
+    }
+    if (!process.env.SPACETIMEDB_ATTESTOR_TOKEN && process.env.SPACETIMEDB_ADMIN_TOKEN) {
+      console.warn(
+        'Using SPACETIMEDB_ADMIN_TOKEN (database-owner level). Mint an attestor identity and set SPACETIMEDB_ATTESTOR_TOKEN instead — see infra/spacetimedb-attestor.md'
       );
     }
     const moduleName = process.env.NEXT_PUBLIC_SPACETIME_MODULE_NAME || 'shootris-game';
