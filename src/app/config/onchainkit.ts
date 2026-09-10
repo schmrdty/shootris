@@ -16,6 +16,11 @@ export const MYU_DECIMALS = Number(process.env.NEXT_PUBLIC_MYU_DECIMALS || 18);
 export const CONTINUE_PRICE_MYU = process.env.NEXT_PUBLIC_CONTINUE_PRICE_MYU || process.env.NEXT_PUBLIC_CONTINUE_PRICE || '100';
 // Whole-token PvP entry fee per match/queue entry; '0' disables the fee
 export const PVP_ENTRY_FEE_MYU = process.env.NEXT_PUBLIC_PVP_ENTRY_FEE_MYU || '0';
+
+// Shootris card collection on vibe.market — holding any card unlocks the
+// collector piece skins in-game. Chain key must exist in src/lib/chains.ts.
+export const COLLECTION_CHAIN = process.env.NEXT_PUBLIC_COLLECTION_CHAIN || 'robinhood';
+export const COLLECTION_CONTRACT = process.env.NEXT_PUBLIC_COLLECTION_CONTRACT || '';
 export const MYU_CONFIGURED = MYU_TOKEN_ADDRESS !== '0x0000000000000000000000000000000000000000';
 
 export const MYU_TOKEN: Token = {

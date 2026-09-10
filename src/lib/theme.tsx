@@ -1,6 +1,15 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  PIECE_BY_COLOR,
+  tileUrl,
+  loadAppliedSkins,
+  saveAppliedSkins,
+  type AppliedSkins,
+  type PieceKey,
+  type SkinSet,
+} from './skins';
 
 export type GameTheme = 'neon' | 'earthen';
 
@@ -26,15 +35,20 @@ interface GameThemeContextValue {
   setTheme: (theme: GameTheme) => void;
   /** Map an engine color to its themed render color. */
   mapColor: (color: string) => string;
-  /** Board cell styling for the active theme. */
+  /** Board cell styling for the active theme and any applied skin. */
   cellStyle: (color: string | null, size: number) => React.CSSProperties;
   emptyCellColor: string;
+  /** Per-piece card-art skins unlocked by NFT holdings. */
+  appliedSkins: AppliedSkins;
+  applySkins: (skins: AppliedSkins) => void;
+  clearSkins: () => void;
 }
 
 const GameThemeContext = createContext<GameThemeContextValue | null>(null);
 
 export function GameThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<GameTheme>('neon');
+  const [appliedSkins, setAppliedSkins] = useState<AppliedSkins>({});
 
   useEffect(() => {
     try {
@@ -43,6 +57,7 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
     } catch {
       // storage unavailable — default stands
     }
+    setAppliedSkins(loadAppliedSkins());
   }, []);
 
   useEffect(() => {
@@ -58,6 +73,19 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const applySkins = useCallback((skins: AppliedSkins) => {
+    setAppliedSkins((prev) => {
+      const merged = { ...prev, ...skins };
+      saveAppliedSkins(merged);
+      return merged;
+    });
+  }, []);
+
+  const clearSkins = useCallback(() => {
+    setAppliedSkins({});
+    saveAppliedSkins({});
+  }, []);
+
   const isEarthen = theme === 'earthen';
 
   const mapColor = useCallback(
@@ -70,7 +98,7 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
   const cellStyle = useCallback(
     (color: string | null, size: number): React.CSSProperties => {
       const themed = color ? (isEarthen ? EARTHEN_COLORS[color] ?? color : color) : null;
-      return {
+      const base: React.CSSProperties = {
         width: `${size}px`,
         height: `${size}px`,
         backgroundColor: themed || (isEarthen ? '#efe7d4' : '#000'),
@@ -80,12 +108,27 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
             : `0 0 ${size / 3}px ${themed}, inset 0 0 ${size / 3}px ${themed}`
           : 'none',
       };
+
+      // Card-art tile for this piece, if one is unlocked and applied.
+      // A missing image file simply leaves the flat colour showing.
+      if (color) {
+        const piece: PieceKey | undefined = PIECE_BY_COLOR[color];
+        const set: SkinSet | undefined = piece ? appliedSkins[piece] : undefined;
+        if (piece && set) {
+          base.backgroundImage = `url(${tileUrl(set, piece)})`;
+          base.backgroundSize = '100% 100%';
+          base.backgroundRepeat = 'no-repeat';
+        }
+      }
+      return base;
     },
-    [isEarthen]
+    [isEarthen, appliedSkins]
   );
 
   return (
-    <GameThemeContext.Provider value={{ theme, isEarthen, setTheme, mapColor, cellStyle, emptyCellColor }}>
+    <GameThemeContext.Provider
+      value={{ theme, isEarthen, setTheme, mapColor, cellStyle, emptyCellColor, appliedSkins, applySkins, clearSkins }}
+    >
       {children}
     </GameThemeContext.Provider>
   );

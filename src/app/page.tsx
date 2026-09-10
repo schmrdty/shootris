@@ -11,6 +11,7 @@ import { useIsInFarcaster } from "@/hooks/useIsInFarcaster";
 import { WalletConnect } from '@/components/wallet-connect';
 import { ShareOnFarcaster } from '@/components/ShareOnFarcaster';
 import { ChevronsUp, Gamepad2, Swords, Trophy, Settings, BookOpen, TriangleAlert } from 'lucide-react';
+import { SkinUnlockPrompt } from '@/components/SkinUnlockPrompt';
 
 export default function Home() {
   const { address, status } = useAccount();
@@ -65,6 +66,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen grid-pattern px-3 sm:px-4 py-6 sm:py-8 pt-14 sm:pt-20" style={{ background: 'linear-gradient(135deg, #0a0e27 0%, #1a0a2e 50%, #0f0a1e 100%)' }}>
+      {/* vibe.market card art detected on sign-in */}
+      <SkinUnlockPrompt />
+
       <div className="max-w-5xl mx-auto space-y-5 sm:space-y-8">
         {/* Wallet Connect Bar */}
         <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-3 mb-2 sm:mb-4">

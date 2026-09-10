@@ -9,13 +9,15 @@ import { Label } from '@/components/ui/label';
 import { useSpacetimeDB } from '@/lib/spacetime/hooks';
 import { useGameTheme } from '@/lib/theme';
 import Link from 'next/link';
-import { Sprout, Zap } from 'lucide-react';
+import { Sprout, Zap, Sparkles } from 'lucide-react';
+import { SET_LABELS, PIECE_KEYS } from '@/lib/skins';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { address } = useAccount();
   const { connection, player } = useSpacetimeDB(address || null);
-  const { theme, setTheme, isEarthen } = useGameTheme();
+  const { theme, setTheme, isEarthen, appliedSkins, clearSkins } = useGameTheme();
+  const skinCount = PIECE_KEYS.filter((p) => appliedSkins[p]).length;
 
   const handleMusicToggle = (enabled: boolean) => {
     if (!connection || !address) return;
@@ -56,6 +58,38 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-500">
               Current theme: {theme}. Saved on this device — no wallet needed.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-black/80 border-yellow-500/50">
+          <CardHeader>
+            <CardTitle className="text-xl text-yellow-400 flex items-center gap-2">
+              <Sparkles className="h-5 w-5" aria-hidden="true" /> Card Art
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {skinCount === 0 ? (
+              <p className="text-sm text-gray-400">
+                Using default piece art. Collect Shootris cards on vibe.market and they&apos;ll be
+                offered here the next time you sign in.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-300">
+                  {skinCount} of {PIECE_KEYS.length} pieces are using your card art:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {PIECE_KEYS.filter((p) => appliedSkins[p]).map((p) => (
+                    <span key={p} className="text-xs bg-gray-800/50 rounded px-2 py-1 text-yellow-400">
+                      {p} · {SET_LABELS[appliedSkins[p]!]}
+                    </span>
+                  ))}
+                </div>
+                <Button variant="outline" onClick={clearSkins} className="w-full">
+                  Reset to default art
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
