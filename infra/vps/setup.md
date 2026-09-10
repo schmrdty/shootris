@@ -1,60 +1,51 @@
 # VPS front-door setup
 
-The VPS is a dumb, disposable front door: Caddy for TLS + reverse proxy,
-Tailscale for the private path home. No app code, no secrets, no data.
-Any ~$4–6/mo box (1 vCPU / 1 GB, e.g. Hetzner CX22, Racknerd, DigitalOcean)
-is plenty. Instructions assume Ubuntu/Debian.
+A disposable box that forwards :80 and :443 to the home server over
+Tailscale. No app code, no certificates, no secrets. Any ~€3/mo instance
+(1 vCPU / 1 GB) is plenty — it only shuffles packets.
 
-## 1. Base hardening
+## 1. Deploy
 
-```bash
-sudo apt update && sudo apt -y upgrade
-sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw allow OpenSSH
-sudo ufw enable
-```
+Paste [cloud-init.yaml](cloud-init.yaml) into the provider's **User data**
+field. It installs nginx (stream), Tailscale, Docker, ufw, fail2ban and
+unattended-upgrades, and drops a `link-home` helper.
 
-## 2. Tailscale (private tunnel to home)
+**Add an SSH key in the deploy form.** Without one you'll be sent a root
+password instead, and the script deliberately won't disable password login
+(so a keyless deploy can't lock you out).
 
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up
-```
+Optionally set `TS_AUTHKEY` inside the script first
+([generate one](https://login.tailscale.com/admin/settings/keys)) to join
+the tailnet automatically; otherwise SSH in and run `sudo tailscale up`.
 
-Log in with the same Tailscale account as the home server. Then note the
-home server's tailnet IP (run on the home server):
+## 2. Point it at home
+
+On the **home server**:
 
 ```bash
 tailscale ip -4
 ```
 
-## 3. Caddy
+On the **VPS**:
 
 ```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install -y caddy
+sudo link-home 100.x.y.z
 ```
 
-Copy [Caddyfile](Caddyfile) to `/etc/caddy/Caddyfile`, replace
-`HOME_TAILNET_IP` with the home server's tailnet IP, then:
+That writes the nginx stream config, disables the default site, and reloads.
+Re-run it any time the home server's tailnet IP changes.
 
-```bash
-sudo systemctl reload caddy
-```
+## 3. DNS
 
-Caddy fetches and renews certificates automatically once DNS points here.
-
-## 4. DNS
-
-At the schmidtiest.xyz registrar, add an A record:
-`shootris` → this VPS's public IPv4.
+At the schmidtiest.xyz registrar, add an A record per game
+(`shootris` → the VPS's public IPv4). One IP serves unlimited subdomains —
+routing happens by hostname at home, so you never need extra IPs.
 
 ## Notes
 
-- $0 alternative: Cloudflare Tunnel (`cloudflared`) on the home server can
-  replace this VPS entirely, at the cost of a Cloudflare dependency.
-- No-third-party tunnel alternative: plain WireGuard between VPS and home
-  (Tailscale is WireGuard with the key management done for you).
-- The VPS can be rebuilt from this doc in ~10 minutes; nothing on it is
-  precious.
+- Certificates are issued at home; ACME HTTP-01 works because :80 passes
+  straight through.
+- Rebuild this box from scratch in ~3 minutes by redeploying with the same
+  user data. Nothing on it is precious.
+- `$0` alternative to the whole VPS: Cloudflare Tunnel from the home server,
+  at the cost of a Cloudflare dependency.

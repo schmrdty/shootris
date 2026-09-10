@@ -1,22 +1,77 @@
-# Production compose for the HOME SERVER.
-# Builds from the repo root Dockerfile (standalone Next.js build).
+# HOME SERVER — Traefik + every game container.
 #
-# Create infra/home/.env next to this file with:
-#   TAILNET_IP=100.x.y.z        # this machine's Tailscale IP (tailscale ip -4)
-# Without it, the game binds to localhost only (safe default; the VPS
-# won't reach it until TAILNET_IP is set).
+# Traefik terminates TLS (Let's Encrypt) and routes by hostname, discovering
+# containers from their labels. Adding a game = a new service with four
+# labels. The VPS front door never changes.
 #
-# The repo root .env.local must exist before building: NEXT_PUBLIC_* values
-# are baked in at build time, and server-side secrets (SPACETIMEDB_ADMIN_TOKEN)
-# are injected at runtime via env_file below.
+# Requires infra/home/.env:
+#   ACME_EMAIL=you@example.com
+#   SHOOTRIS_HOST=shootris.schmidtiest.xyz
+#
+# Repo-root .env.local supplies the app's runtime secrets and build-time
+# NEXT_PUBLIC_* values.
 
 services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # Everything arrives over TLS; plain http just redirects
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # HTTP-01 works because the VPS passes :80 straight through to here
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Read-only socket: Traefik only needs to *see* containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - games
+
   shootris:
+    # Dockerfile already sets BUILD_STANDALONE=1 for the standalone output
     build:
       context: ../..
     container_name: shootris
     restart: unless-stopped
     env_file:
       - ../../.env.local
-    ports:
-      - "${TAILNET_IP:-127.0.0.1}:3000:3000"
+    expose:
+      - "3000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.shootris.rule=Host(`${SHOOTRIS_HOST}`)
+      - traefik.http.routers.shootris.entrypoints=websecure
+      - traefik.http.routers.shootris.tls.certresolver=le
+      - traefik.http.services.shootris.loadbalancer.server.port=3000
+    networks:
+      - games
+
+  # ── Template for the next game ──────────────────────────────────────
+  # <game>:
+  #   build: /path/to/that/game
+  #   restart: unless-stopped
+  #   env_file: [/path/to/that/game/.env.local]
+  #   expose: ["3000"]
+  #   labels:
+  #     - traefik.enable=true
+  #     - traefik.http.routers.<game>.rule=Host(`<game>.schmidtiest.xyz`)
+  #     - traefik.http.routers.<game>.entrypoints=websecure
+  #     - traefik.http.routers.<game>.tls.certresolver=le
+  #     - traefik.http.services.<game>.loadbalancer.server.port=3000
+  #   networks: [games]
+
+networks:
+  games:
+    driver: bridge

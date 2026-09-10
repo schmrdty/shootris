@@ -11,7 +11,10 @@ Set in `.env.local` (see `.env.local.example`):
 - `NEXT_PUBLIC_CONTINUE_PRICE_MYU` — whole-token price of one continue (default 100)
 - `NEXT_PUBLIC_PAYOUT_SPLIT_ADDRESS` — where continue payments are sent
 
-- `NEXT_PUBLIC_PVP_ENTRY_FEE_MYU` — whole-token PvP entry fee per match/queue entry; `0` (default) disables it. Note: PvP matchmaking works, but the in-match PvP gameplay screen was never implemented by Ohara — keep this at 0 until it is.
+- `NEXT_PUBLIC_PVP_ENTRY_FEE_MYU` — whole-token PvP entry fee per match/queue entry; `0` (default) disables it. Matchmaking and the in-match PvP screen are both implemented, so this can be turned on whenever you want PvP to cost MYU.
+
+- `NEXT_PUBLIC_COLLECTION_CHAIN` / `NEXT_PUBLIC_COLLECTION_CONTRACT` — the vibe.market card collection that unlocks piece skins (see [design/nft-asset-spec.md](design/nft-asset-spec.md)). Set `COLLECTION_FROM_BLOCK` to the deploy block so ownership scans stay fast.
+- `NEXT_PUBLIC_MILESTONE_NFT_URL` — mint page linked from the Journey stage-clear reward. Unset hides the button.
 
 Deployment target: `shootris.schmidtiest.xyz`. After deploying, re-sign the Farcaster `accountAssociation` in `public/.well-known/farcaster.json` for the new domain (the old signature is bound to the Ohara domain).
 
@@ -19,11 +22,11 @@ Deployment target: `shootris.schmidtiest.xyz`. After deploying, re-sign the Farc
 
 The frontend is the only thing you host — the game backend is the SpacetimeDB module on Maincloud, and payments/swaps run on Base.
 
-Production runs on the **VPS-front-door + home-server** pattern shared by all D3MYUR games: a small VPS terminates TLS with Caddy and forwards over a private Tailscale tunnel to Docker containers on the home server. Full setup and the add-a-game checklist live in [infra/README.md](infra/README.md).
+Production runs on the **VPS-front-door + home-server** pattern shared by all D3MYUR games: a small VPS passes :80/:443 straight through a private Tailscale tunnel to the home server, where Traefik terminates TLS and routes each game by hostname from its Docker labels. Full setup and the add-a-game checklist live in [infra/README.md](infra/README.md).
 
 (Fallback: the repo also deploys cleanly to Vercel — import, set the `.env.local` vars, add the domain.)
 
-HTTPS is required for Farcaster mini-app embedding; Caddy handles certificates automatically once the `shootris.schmidtiest.xyz` A record points at the VPS.
+HTTPS is required for Farcaster mini-app embedding; Traefik issues and renews certificates automatically once the `shootris.schmidtiest.xyz` A record points at the VPS.
  
 ## Getting Started
 

@@ -1,0 +1,125 @@
+#cloud-config
+# Cherry Servers "User data" for the D3MYUR games FRONT DOOR.
+#
+# What this box does: forward :80 and :443 straight to the home server over
+# Tailscale. TLS is terminated at HOME by Traefik, so this VPS holds no certs,
+# no secrets, and no per-game config — you never touch it again when adding
+# games.
+#
+# BEFORE PASTING: set TS_AUTHKEY below if you want the box to join your
+# tailnet automatically (generate a single-use key at
+# https://login.tailscale.com/admin/settings/keys). Leave it empty to run
+# `sudo tailscale up` yourself after boot.
+#
+# AFTER BOOT: run  sudo link-home 100.x.y.z   (the home server's tailnet IP)
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - nginx
+  - libnginx-mod-stream
+  - curl
+  - ca-certificates
+  - gnupg
+
+write_files:
+  # One command to (re)point the front door at home.
+  - path: /usr/local/bin/link-home
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      HOME_IP="${1:?usage: sudo link-home <home-tailnet-ip>}"
+
+      # nginx must not answer on 80 itself — it only forwards.
+      rm -f /etc/nginx/sites-enabled/default
+
+      cat > /etc/nginx/stream-home.conf <<EOF
+      # Managed by link-home. Plain TCP passthrough to the home server.
+      stream {
+          upstream home_http  { server ${HOME_IP}:80; }
+          upstream home_https { server ${HOME_IP}:443; }
+
+          server {
+              listen 80;
+              listen [::]:80;
+              proxy_pass home_http;
+              proxy_connect_timeout 5s;
+          }
+          server {
+              listen 443;
+              listen [::]:443;
+              proxy_pass home_https;
+              proxy_connect_timeout 5s;
+          }
+      }
+      EOF
+
+      # Include it at top level (a stream block cannot live inside http {}).
+      if ! grep -q 'stream-home.conf' /etc/nginx/nginx.conf; then
+        echo 'include /etc/nginx/stream-home.conf;' >> /etc/nginx/nginx.conf
+      fi
+
+      nginx -t
+      systemctl reload nginx
+      echo "Front door now forwarding 80/443 -> ${HOME_IP}"
+
+  - path: /etc/fail2ban/jail.local
+    content: |
+      [sshd]
+      enabled = true
+      maxretry = 5
+      bantime = 1h
+
+  - path: /root/README-frontdoor.txt
+    content: |
+      This VPS is a disposable front door. It runs:
+        - nginx (TCP passthrough of :80/:443 to the home server)
+        - tailscale (the private path home)
+      Nothing else. No app code, no certificates, no secrets.
+
+      Point it at home:   sudo link-home 100.x.y.z
+      Check the tunnel:   tailscale status
+      Rebuild from scratch: redeploy with this same user data (~3 minutes).
+
+runcmd:
+  # Firewall: SSH + web only
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+
+  # Unattended security updates
+  - dpkg-reconfigure -f noninteractive unattended-upgrades
+
+  # Docker (not needed for the passthrough, but handy if you ever move a
+  # container here)
+  - curl -fsSL https://get.docker.com | sh
+  - systemctl enable --now docker
+
+  # Tailscale
+  - curl -fsSL https://tailscale.com/install.sh | sh
+  - |
+    TS_AUTHKEY=""
+    if [ -n "$TS_AUTHKEY" ]; then
+      tailscale up --authkey "$TS_AUTHKEY" --hostname d3myur-frontdoor --ssh
+    else
+      echo "No TS_AUTHKEY set — run 'sudo tailscale up' to join the tailnet." >> /root/README-frontdoor.txt
+    fi
+
+  # Only lock down SSH passwords if a key actually got installed, so a
+  # keyless deploy can't lock you out.
+  - |
+    if [ -s /root/.ssh/authorized_keys ]; then
+      sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+      systemctl restart ssh || systemctl restart sshd
+    fi
+
+  - systemctl enable --now nginx
+  - systemctl enable --now fail2ban
+
+final_message: "Front door ready. Next: sudo link-home <home-tailnet-ip>"
