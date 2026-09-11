@@ -21,3 +21,7 @@ contracts/out
 contracts/cache
 contracts/lib
 contracts/broadcast
+
+# Art-direction prompts stay local (kept out of the public repo)
+design/tetromino-prompts.md
+design/stage-prompts.md

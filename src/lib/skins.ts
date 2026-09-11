@@ -28,7 +28,7 @@ export const PIECE_BY_COLOR: Record<string, PieceKey> = {
   '#f0a000': 'L',
 };
 
-// Card nicknames from design/tetromino-prompts.md, so cards named
+// Card nicknames from the art brief, so cards named
 // "The Lance" / "The Root" still resolve to a piece.
 const NICKNAME_BY_PIECE: Record<PieceKey, string[]> = {
   I: ['lance', 'root'],

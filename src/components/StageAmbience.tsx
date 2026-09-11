@@ -15,7 +15,7 @@ interface StageAmbienceProps {
  *   public/stages/{neon|earthen}/stage-{n}.jpg
  *   public/music/{neon|earthen}/stage-{n}.mp3
  * Missing files fail silently — drop in art/tracks as they're produced
- * (see design/stage-prompts.md) and they appear without code changes.
+ * and they appear without code changes.
  * Stages beyond the available assets reuse the highest existing one is NOT
  * attempted; each stage simply shows nothing until its file exists.
  */
