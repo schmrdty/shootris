@@ -20,6 +20,19 @@ touched again.
 
 Setup order: [vps/setup.md](vps/setup.md) → [home/setup.md](home/setup.md).
 
+## Option B: co-host on a server you already have
+
+If the target box **already runs a reverse proxy** (keen-fish runs Caddy for
+wally./admin.), skip the tunnel entirely: run the game container bound to
+localhost and add one block to the existing Caddyfile. Nothing already on
+the box is disturbed, and there is no second proxy fighting for :80/:443.
+See [cohost-caddy.md](cohost-caddy.md).
+
+Trade-off vs. hosting at home: better uptime and latency, and it keeps the
+work off your workstation — but the server then holds
+`SPACETIMEDB_ATTESTOR_TOKEN`, so use the least-privilege attestor identity
+([spacetimedb-attestor.md](spacetimedb-attestor.md)), never the owner token.
+
 ## Adding the next game
 
 1. **Home:** add a service to [home/docker-compose.yml](home/docker-compose.yml)

@@ -1,0 +1,19 @@
+# Shootris container for a server that ALREADY runs a reverse proxy
+# (e.g. keen-fish, which runs Caddy for wally./admin.).
+#
+# No Traefik here — it would fight the existing proxy for :80/:443.
+# The container binds to localhost; the host's Caddy proxies to it.
+# See cohost-caddy.md.
+
+services:
+  shootris:
+    # Dockerfile already sets BUILD_STANDALONE=1 for the standalone output
+    build:
+      context: ..
+    container_name: shootris
+    restart: unless-stopped
+    env_file:
+      - ../.env.local
+    ports:
+      # localhost only — the internet reaches this through Caddy, not directly
+      - "127.0.0.1:${SHOOTRIS_PORT:-3000}:3000"
