@@ -344,7 +344,7 @@ fn default_duration_for(match_type: &MatchType) -> i64 {
 /// Point the module at the app server's least-privilege identity.
 /// Owner only. Call it again at any time to rotate the attestor — for
 /// example if the public server is rebuilt or believed compromised:
-///   spacetime call shootris-game set_attestor '["<identity-hex>"]'
+///   spacetime call shootris-game set_attestor '"<identity-hex>"'
 #[reducer]
 pub fn set_attestor(ctx: &ReducerContext, identity_hex: String) -> Result<(), String> {
     if ctx.sender != owner_identity() {

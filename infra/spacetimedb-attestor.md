@@ -37,7 +37,7 @@ Response: `{"identity":"c200…","token":"eyJ…"}`
 **2. Authorise it** from a trusted machine, logged in as the owner:
 
 ```bash
-spacetime call shootris-game set_attestor '["<identity-from-step-1>"]'
+spacetime call shootris-game set_attestor '"<identity-from-step-1>"'
 ```
 
 **3. Give the app server the token** (not the identity) in `.env.local`:
