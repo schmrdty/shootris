@@ -117,11 +117,10 @@ export function parseCardToSkin(
   const piece = (pieceAttr && pieceFromText(pieceAttr)) || pieceFromText(name);
   if (!piece) return null;
 
-  // vibe.market rarity codes: 0 unassigned, higher = rarer. Epic and above
-  // counts as an alt-art collector pull even if the name doesn't say so.
-  if (typeof rarityCode === 'number' && rarityCode >= 3) {
-    return { set: 'collector', piece };
-  }
+  // Rarity is recorded but never used to infer a set: under "collect all 7"
+  // a misattributed card would corrupt completion counts. Identify from the
+  // card's own set words, or ignore it.
+  void rarityCode;
   if (!set) return null;
   return { set, piece };
 }
@@ -129,8 +128,6 @@ export function parseCardToSkin(
 export type AppliedSkins = Partial<Record<PieceKey, SkinSet>>;
 
 export const SKINS_STORAGE_KEY = 'shootris_applied_skins';
-export const SKINS_SEEN_KEY = 'shootris_seen_cards';
-
 export function loadAppliedSkins(): AppliedSkins {
   try {
     const raw = localStorage.getItem(SKINS_STORAGE_KEY);
@@ -148,18 +145,47 @@ export function saveAppliedSkins(skins: AppliedSkins): void {
   }
 }
 
-export function loadSeenCards(): string[] {
+export const SEEN_SETS_KEY = 'shootris_seen_completed_sets';
+
+// ── Set completion ────────────────────────────────────────────────────
+// A minted set is usable only once ALL seven of its pieces are held.
+// Hold all 28 cards and every minted set is complete, so "collect all 28 to
+// unlock all sets" follows automatically. Free sets are always usable.
+
+export interface SetProgress {
+  set: SkinSet;
+  held: PieceKey[];
+  total: number;
+  complete: boolean;
+}
+
+export function computeSetProgress(cards: OwnedCard[]): SetProgress[] {
+  return MINTED_SETS.map((set) => {
+    // Distinct pieces: two copies of the same card still count once
+    const held = PIECE_KEYS.filter((p) => cards.some((c) => c.set === set && c.piece === p));
+    return { set, held, total: PIECE_KEYS.length, complete: held.length === PIECE_KEYS.length };
+  });
+}
+
+export function unlockedSetsFrom(cards: OwnedCard[]): SkinSet[] {
+  const completed = computeSetProgress(cards)
+    .filter((p) => p.complete)
+    .map((p) => p.set);
+  return [...FREE_SETS, ...completed];
+}
+
+export function loadSeenSets(): SkinSet[] {
   try {
-    const raw = localStorage.getItem(SKINS_SEEN_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
+    const raw = localStorage.getItem(SEEN_SETS_KEY);
+    return raw ? (JSON.parse(raw) as SkinSet[]) : [];
   } catch {
     return [];
   }
 }
 
-export function saveSeenCards(ids: string[]): void {
+export function saveSeenSets(sets: SkinSet[]): void {
   try {
-    localStorage.setItem(SKINS_SEEN_KEY, JSON.stringify(ids));
+    localStorage.setItem(SEEN_SETS_KEY, JSON.stringify(sets));
   } catch {
     // no-op
   }

@@ -33,3 +33,6 @@ cards/
 .unknown/
 .files/
 cX/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

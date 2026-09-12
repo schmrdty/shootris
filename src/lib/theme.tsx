@@ -10,6 +10,7 @@ import {
   type PieceKey,
   type SkinSet,
 } from './skins';
+import { useCollection } from './collection';
 
 export type GameTheme = 'neon' | 'earthen';
 
@@ -49,6 +50,9 @@ const GameThemeContext = createContext<GameThemeContextValue | null>(null);
 export function GameThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<GameTheme>('neon');
   const [appliedSkins, setAppliedSkins] = useState<AppliedSkins>({});
+  // Stored choices are only a preference — rendering is gated on verified
+  // holdings, so editing localStorage cannot grant a minted skin.
+  const { unlockedSets } = useCollection();
 
   useEffect(() => {
     try {
@@ -114,7 +118,7 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
       if (color) {
         const piece: PieceKey | undefined = PIECE_BY_COLOR[color];
         const set: SkinSet | undefined = piece ? appliedSkins[piece] : undefined;
-        if (piece && set) {
+        if (piece && set && unlockedSets.includes(set)) {
           base.backgroundImage = `url(${tileUrl(set, piece)})`;
           base.backgroundSize = '100% 100%';
           base.backgroundRepeat = 'no-repeat';
@@ -125,7 +129,7 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
       }
       return base;
     },
-    [isEarthen, appliedSkins]
+    [isEarthen, appliedSkins, unlockedSets]
   );
 
   return (

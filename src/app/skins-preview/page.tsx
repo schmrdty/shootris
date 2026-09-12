@@ -56,15 +56,28 @@ function TileStatus({ set, piece }: { set: SkinSet; piece: PieceKey }) {
   );
 }
 
-/** Draw a tetromino shape using the real in-game cell renderer. */
-function ShapeGrid({ piece, size }: { piece: Tetromino; size: number }) {
-  const { cellStyle } = useGameTheme();
+/**
+ * Draw a shape with a specific set's tile, bypassing ownership gating. This is
+ * a VIEW-ONLY design check: it never applies a skin to gameplay.
+ */
+function ShapeGrid({ piece, size, set }: { piece: Tetromino; size: number; set: SkinSet }) {
+  const { mapColor, emptyCellColor } = useGameTheme();
+  const key = PIECE_KEYS.find((k) => TETROMINOES[k].color === piece.color);
   return (
     <div className="inline-block">
       {piece.shape.map((row, y) => (
         <div key={y} className="flex">
           {row.map((cell, x) => (
-            <div key={x} style={cellStyle(cell ? piece.color : null, size)} />
+            <div
+              key={x}
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                backgroundColor: cell ? mapColor(piece.color) : emptyCellColor,
+                backgroundImage: cell && key ? `url(${tileUrl(set, key)})` : undefined,
+                backgroundSize: '100% 100%',
+              }}
+            />
           ))}
         </div>
       ))}
@@ -83,14 +96,9 @@ function rotations(base: Tetromino): Tetromino[] {
 }
 
 export default function SkinsPreviewPage() {
-  const { isEarthen, setTheme, appliedSkins, applySkins, clearSkins } = useGameTheme();
+  const { isEarthen, setTheme } = useGameTheme();
   const [size, setSize] = useState(24);
 
-  const previewSet = (set: SkinSet) => {
-    const next: Record<string, SkinSet> = {};
-    for (const p of PIECE_KEYS) next[p] = set;
-    applySkins(next);
-  };
 
   return (
     <div className="min-h-screen px-4 py-8 pt-16" style={{ background: 'linear-gradient(135deg, #0a0e27 0%, #1a0a2e 50%, #0f0a1e 100%)' }}>
@@ -108,6 +116,7 @@ export default function SkinsPreviewPage() {
           </p>
           <p className="text-xs text-gray-400">
             Drop tiles at <code className="text-cyan-400">public/skins/&#123;set&#125;/&#123;i,o,t,s,z,j,l&#125;.png</code> and refresh.
+            This page only <em>previews</em> art — using a minted set in game requires holding all 7 of its cards.
           </p>
 
           <div className="flex flex-wrap gap-2 pt-2">
@@ -122,15 +131,6 @@ export default function SkinsPreviewPage() {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-1">
-            <span className="text-xs text-gray-400 self-center">Apply a set to all pieces:</span>
-            {SKIN_SETS.map((s) => (
-              <Button key={s} size="sm" variant="outline" onClick={() => previewSet(s)}>
-                {SET_LABELS[s]}
-              </Button>
-            ))}
-            <Button size="sm" variant="outline" onClick={clearSkins}>Flat colour</Button>
-          </div>
         </Card>
 
         {SKIN_SETS.map((set) => (
@@ -143,11 +143,10 @@ export default function SkinsPreviewPage() {
                   color: TETROMINOES[key].color,
                   position: { x: 0, y: 0 },
                 };
-                const active = appliedSkins[key] === set;
                 return (
                   <div
                     key={key}
-                    className={`rounded border p-2 ${active ? 'border-cyan-500' : 'border-gray-700'}`}
+                    className="rounded border border-gray-700 p-2"
                   >
                     <div className="flex justify-between items-baseline mb-1">
                       <span className="font-bold text-white">{key}</span>
@@ -156,7 +155,7 @@ export default function SkinsPreviewPage() {
                     <div className="flex flex-wrap gap-3 items-end">
                       {rotations(base).map((r, i) => (
                         <div key={i} className="text-center">
-                          <ShapeGrid piece={r} size={size} />
+                          <ShapeGrid piece={r} size={size} set={set} />
                           <div className="text-[10px] text-gray-500 mt-1">{i * 90}°</div>
                         </div>
                       ))}

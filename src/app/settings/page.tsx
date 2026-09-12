@@ -11,13 +11,14 @@ import { useGameTheme } from '@/lib/theme';
 import Link from 'next/link';
 import { Sprout, Zap, Sparkles } from 'lucide-react';
 import { SET_LABELS, PIECE_KEYS, FREE_SETS } from '@/lib/skins';
+import { useCollection } from '@/lib/collection';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { address } = useAccount();
   const { connection, player } = useSpacetimeDB(address || null);
   const { theme, setTheme, isEarthen, appliedSkins, applySkins, clearSkins } = useGameTheme();
-  const skinCount = PIECE_KEYS.filter((p) => appliedSkins[p]).length;
+  const { setProgress, unlockedSets, loading: collectionLoading } = useCollection();
 
   const handleMusicToggle = (enabled: boolean) => {
     if (!connection || !address) return;
@@ -67,41 +68,66 @@ export default function SettingsPage() {
               <Sparkles className="h-5 w-5" aria-hidden="true" /> Card Art
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-800">
-              <span className="text-xs text-gray-400 self-center">Free for everyone:</span>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-300">
+              Collect all 7 cards of a set on vibe.market to unlock it in game. Collect all 28 to
+              unlock every set.
+            </p>
+
+            {!address ? (
+              <p className="text-sm text-yellow-400">
+                Connect the wallet that holds your Shootris cards to see your progress.
+              </p>
+            ) : collectionLoading ? (
+              <p className="text-sm text-gray-400">Checking your cards…</p>
+            ) : null}
+
+            <div className="space-y-2">
+              {setProgress.map((p) => (
+                <div key={p.set} className="flex items-center justify-between gap-3 rounded border border-gray-800 p-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white">{SET_LABELS[p.set]}</p>
+                    <p className="text-xs text-gray-400">
+                      {p.held.length}/{p.total}
+                      {p.held.length > 0 && p.held.length < p.total && ` — have ${p.held.join(' ')}`}
+                    </p>
+                  </div>
+                  {p.complete ? (
+                    <Button
+                      size="sm"
+                      onClick={() => applySkins(Object.fromEntries(PIECE_KEYS.map((k) => [k, p.set])))}
+                      className="bg-yellow-600 hover:bg-yellow-700 shrink-0"
+                    >
+                      Use
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-gray-500 shrink-0">Locked</span>
+                  )}
+                </div>
+              ))}
+
               {FREE_SETS.map((set) => (
-                <Button
-                  key={set}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => applySkins(Object.fromEntries(PIECE_KEYS.map((p) => [p, set])))}
-                >
-                  {SET_LABELS[set]}
-                </Button>
+                <div key={set} className="flex items-center justify-between gap-3 rounded border border-gray-800 p-2">
+                  <div>
+                    <p className="text-sm font-bold text-white">{SET_LABELS[set]}</p>
+                    <p className="text-xs text-gray-400">Free for every player</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => applySkins(Object.fromEntries(PIECE_KEYS.map((k) => [k, set])))}
+                    className="shrink-0"
+                  >
+                    Use
+                  </Button>
+                </div>
               ))}
             </div>
-            {skinCount === 0 ? (
-              <p className="text-sm text-gray-400">
-                Using default piece art. Collect Shootris cards on vibe.market and they&apos;ll be
-                offered here the next time you sign in.
-              </p>
-            ) : (
-              <>
-                <p className="text-sm text-gray-300">
-                  {skinCount} of {PIECE_KEYS.length} pieces are using your card art:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {PIECE_KEYS.filter((p) => appliedSkins[p]).map((p) => (
-                    <span key={p} className="text-xs bg-gray-800/50 rounded px-2 py-1 text-yellow-400">
-                      {p} · {SET_LABELS[appliedSkins[p]!]}
-                    </span>
-                  ))}
-                </div>
-                <Button variant="outline" onClick={clearSkins} className="w-full">
-                  Reset to default art
-                </Button>
-              </>
+
+            {PIECE_KEYS.some((k) => appliedSkins[k] && unlockedSets.includes(appliedSkins[k]!)) && (
+              <Button variant="outline" onClick={clearSkins} className="w-full">
+                Reset to default art
+              </Button>
             )}
           </CardContent>
         </Card>
