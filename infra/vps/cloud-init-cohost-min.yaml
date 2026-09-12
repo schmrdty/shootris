@@ -1,0 +1,69 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - curl
+  - ca-certificates
+  - gnupg
+  - debian-keyring
+  - debian-archive-keyring
+  - apt-transport-https
+  - git
+
+write_files:
+  - path: /etc/fail2ban/jail.local
+    content: |
+      [sshd]
+      enabled = true
+      maxretry = 5
+      bantime = 1h
+
+  - path: /root/README-server.txt
+    content: |
+      Rebuilt from infra/vps/cloud-init-cohost.yaml
+
+      Installed: Caddy (TLS + reverse proxy), Docker, ufw, fail2ban,
+      unattended-upgrades. Deliberately NOT installed: nginx.
+
+      Caddy owns :80 and :443. Game containers bind to 127.0.0.1 only and
+      Caddy proxies to them, so nothing else should claim those ports.
+
+      Add a site:
+        sudo tee -a /etc/caddy/Caddyfile   # one block per hostname
+        sudo caddy validate --config /etc/caddy/Caddyfile
+        sudo systemctl reload caddy
+
+      Validate BEFORE reloading — a bad block otherwise takes every site
+      down, not just the new one.
+
+runcmd:
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+
+  - dpkg-reconfigure -f noninteractive unattended-upgrades
+
+  - curl -fsSL https://get.docker.com | sh
+  - systemctl enable --now docker
+
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  - apt-get update
+  - apt-get install -y caddy
+  - systemctl enable --now caddy
+
+  - |
+    if [ -s /root/.ssh/authorized_keys ]; then
+      sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+      systemctl restart ssh || systemctl restart sshd
+    fi
+
+  - systemctl enable --now fail2ban
+
+final_message: "Server ready. Caddy and Docker are running; nginx is not installed."
