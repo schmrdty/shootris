@@ -4,6 +4,13 @@ A disposable box that forwards :80 and :443 to the home server over
 Tailscale. No app code, no certificates, no secrets. Any ~€3/mo instance
 (1 vCPU / 1 GB) is plenty — it only shuffles packets.
 
+> **Two user-data files, pick one:**
+> [cloud-init-cohost.yaml](cloud-init-cohost.yaml) — the box hosts the game
+> containers itself and Caddy issues the certificates. No nginx, no tunnel.
+> This is the one for keen-fish.
+> [cloud-init.yaml](cloud-init.yaml) — the passthrough front-door pattern
+> below, where TLS terminates elsewhere.
+
 ## 1. Deploy
 
 Paste [cloud-init.yaml](cloud-init.yaml) into the provider's **User data**
