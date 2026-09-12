@@ -31,9 +31,9 @@ palette, and personality) so a collector sees the connection instantly.
 ### Shape reference (cells per piece)
 
 ```
-I  ████        O  ██        T   █        S   ██      Z  ██
+I  ████        O  ██        T  █        S   ██      Z   ██
                  ██           ███          ██            ██
-J  █           L    █
+L  █           J    █
    ███            ███
 ```
 
