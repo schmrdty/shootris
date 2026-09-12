@@ -4,16 +4,23 @@
 // (set, piece) skin. Only the ART and CARD NAMES matter on the mint side.
 
 export type PieceKey = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
-export type SkinSet = 'basic' | 'earthen' | 'neon' | 'collector';
+export type SkinSet = 'basic' | 'earthen' | 'neon' | 'collector' | 'gunmetal';
 
 export const PIECE_KEYS: PieceKey[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
-export const SKIN_SETS: SkinSet[] = ['basic', 'earthen', 'neon', 'collector'];
+export const SKIN_SETS: SkinSet[] = ['basic', 'earthen', 'neon', 'collector', 'gunmetal'];
+
+// Sets obtainable by holding a vibe.market card. gunmetal is deliberately
+// absent: it is never minted, so it is a free in-game choice rather than an
+// unlock, and the metadata parser never maps a card to it.
+export const MINTED_SETS: SkinSet[] = ['basic', 'earthen', 'neon', 'collector'];
+export const FREE_SETS: SkinSet[] = ['gunmetal'];
 
 export const SET_LABELS: Record<SkinSet, string> = {
   basic: 'Basic',
   earthen: 'Earthen',
   neon: 'Neon',
   collector: 'Collector (alt art)',
+  gunmetal: 'Gunmetal',
 };
 
 // The engine stores neon hex codes as piece identity (see tetrominoes.ts),

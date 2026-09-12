@@ -9,16 +9,22 @@ public/skins/
   earthen/    i.png  o.png  t.png  s.png  z.png  j.png  l.png
   neon/       i.png  o.png  t.png  s.png  z.png  j.png  l.png
   collector/  i.png  o.png  t.png  s.png  z.png  j.png  l.png
+  gunmetal/   i.png  o.png  t.png  s.png  z.png  j.png  l.png
 ```
+
+`basic`, `earthen`, `neon` and `collector` unlock by holding the matching
+vibe.market card. `gunmetal` is never minted — it is a free choice for every
+player in Settings → Card Art.
 
 **Filenames are lowercase single letters** matching the tetromino:
 `i o t s z j l`. Anything else is ignored.
 
 ## What each file must be
 
-- **256×256 PNG with transparency**
-- **6–10 px of transparent inner padding**, so neighbouring cells read as
-  separate blocks instead of merging into a slab
+- **256×256 PNG**
+- **Visible separation between neighbouring cells** — either transparent
+  inner padding, or edge definition drawn into the tile itself (a bevel or a
+  dark border). The shipped sets use the second approach.
 - One self-contained block face — **not** the whole tetromino shape
 - Readable at 13 px (squint test)
 

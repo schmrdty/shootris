@@ -118,6 +118,9 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
           base.backgroundImage = `url(${tileUrl(set, piece)})`;
           base.backgroundSize = '100% 100%';
           base.backgroundRepeat = 'no-repeat';
+          // Tiles carry their own bevels and lighting; the theme's glow or
+          // relief shadow would draw over the art and muddy it.
+          base.boxShadow = 'none';
         }
       }
       return base;

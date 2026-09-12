@@ -25,3 +25,11 @@ contracts/broadcast
 # Art-direction prompts stay local (kept out of the public repo)
 design/tetromino-prompts.md
 design/stage-prompts.md
+
+# Design deliverables stay local: NFT whole-piece art, mint-only card art,
+# handoff notes and working files. Only the 256px tiles in public/skins ship.
+art/
+cards/
+.unknown/
+.files/
+cX/

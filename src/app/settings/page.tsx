@@ -10,13 +10,13 @@ import { useSpacetimeDB } from '@/lib/spacetime/hooks';
 import { useGameTheme } from '@/lib/theme';
 import Link from 'next/link';
 import { Sprout, Zap, Sparkles } from 'lucide-react';
-import { SET_LABELS, PIECE_KEYS } from '@/lib/skins';
+import { SET_LABELS, PIECE_KEYS, FREE_SETS } from '@/lib/skins';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { address } = useAccount();
   const { connection, player } = useSpacetimeDB(address || null);
-  const { theme, setTheme, isEarthen, appliedSkins, clearSkins } = useGameTheme();
+  const { theme, setTheme, isEarthen, appliedSkins, applySkins, clearSkins } = useGameTheme();
   const skinCount = PIECE_KEYS.filter((p) => appliedSkins[p]).length;
 
   const handleMusicToggle = (enabled: boolean) => {
@@ -68,6 +68,19 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-800">
+              <span className="text-xs text-gray-400 self-center">Free for everyone:</span>
+              {FREE_SETS.map((set) => (
+                <Button
+                  key={set}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => applySkins(Object.fromEntries(PIECE_KEYS.map((p) => [p, set])))}
+                >
+                  {SET_LABELS[set]}
+                </Button>
+              ))}
+            </div>
             {skinCount === 0 ? (
               <p className="text-sm text-gray-400">
                 Using default piece art. Collect Shootris cards on vibe.market and they&apos;ll be
