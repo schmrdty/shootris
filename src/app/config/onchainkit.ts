@@ -21,7 +21,9 @@ export const PVP_ENTRY_FEE_MYU = process.env.NEXT_PUBLIC_PVP_ENTRY_FEE_MYU || '0
 // collector piece skins in-game. Chain key must exist in src/lib/chains.ts.
 export const COLLECTION_CHAIN = process.env.NEXT_PUBLIC_COLLECTION_CHAIN || 'robinhood';
 export const COLLECTION_CONTRACT = process.env.NEXT_PUBLIC_COLLECTION_CONTRACT || '';
-export const MYU_CONFIGURED = MYU_TOKEN_ADDRESS !== '0x0000000000000000000000000000000000000000';
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+// Both must be real: paying to the zero address would revert (or burn)
+export const MYU_CONFIGURED = MYU_TOKEN_ADDRESS !== ZERO_ADDRESS && PAYOUT_SPLIT_ADDRESS !== ZERO_ADDRESS;
 
 export const MYU_TOKEN: Token = {
   address: MYU_TOKEN_ADDRESS as `0x${string}`,
