@@ -11,6 +11,7 @@
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.2",
     "@farcaster/miniapp-sdk": "0.2.1",
+    "@farcaster/miniapp-wagmi-connector": "1.1.0",
     "@farcaster/quick-auth": "0.0.7",
     "@hookform/resolvers": "^5.0.1",
     "@prisma/client": "^5.11.0",

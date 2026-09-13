@@ -12,6 +12,10 @@ import Link from 'next/link';
 import { Sprout, Zap, Sparkles } from 'lucide-react';
 import { SET_LABELS, PIECE_KEYS, FREE_SETS } from '@/lib/skins';
 import { useCollection } from '@/lib/collection';
+import { useCallback } from 'react';
+import { useMusicPreference } from '@/lib/music';
+import { usePlayerStats } from '@/lib/spacetime/stats';
+import { PlayerName } from '@/components/PlayerName';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -20,10 +24,14 @@ export default function SettingsPage() {
   const { theme, setTheme, isEarthen, appliedSkins, applySkins, clearSkins } = useGameTheme();
   const { setProgress, unlockedSets, loading: collectionLoading } = useCollection();
 
-  const handleMusicToggle = (enabled: boolean) => {
-    if (!connection || !address) return;
-    connection.reducers.setPlayerMusic(address.toLowerCase(), enabled);
-  };
+  const stats = usePlayerStats(connection, address ?? null);
+  const persistMusic = useCallback(
+    (on: boolean) => {
+      if (connection && address) connection.reducers.setPlayerMusic(address.toLowerCase(), on);
+    },
+    [connection, address]
+  );
+  const [musicOn, setMusicOn] = useMusicPreference(player?.musicOn, persistMusic);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 px-4 py-8 pt-16">
@@ -143,15 +151,10 @@ export default function SettingsPage() {
                   Music
                 </Label>
                 <p className="text-sm text-gray-400">
-                  Toggle chopped & screwed background music
+                  Stage music. Saved on this device, and to your profile when a wallet is connected.
                 </p>
               </div>
-              <Switch
-                id="music-toggle"
-                checked={player?.musicEnabled ?? true}
-                onCheckedChange={handleMusicToggle}
-                disabled={!address}
-              />
+              <Switch id="music-toggle" checked={musicOn} onCheckedChange={setMusicOn} />
             </div>
           </CardContent>
         </Card>
@@ -164,28 +167,55 @@ export default function SettingsPage() {
             {address ? (
               <div>
                 <Label className="text-sm text-gray-400">Connected Wallet</Label>
-                <p className="font-mono text-purple-400 mt-1">
-                  {address.slice(0, 10)}...{address.slice(-8)}
+                <p className="mt-1 text-purple-400">
+                  <PlayerName wallet={address} className="font-bold" />
                 </p>
-                {player && (
-                  <div className="mt-4 pt-4 border-t border-gray-700 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Games Played:</span>
-                      <span className="text-white font-bold">{player.totalGamesPlayed}</span>
+                <p className="font-mono text-xs text-gray-500 break-all">{address}</p>
+                {stats ? (
+                  <div className="mt-4 pt-4 border-t border-gray-700 space-y-4">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded border border-gray-800 p-2">
+                        <p className="text-2xl font-bold text-white">{stats.played}</p>
+                        <p className="text-xs text-gray-400">Played</p>
+                      </div>
+                      <div className="rounded border border-gray-800 p-2">
+                        <p className="text-2xl font-bold text-green-400">{stats.won}</p>
+                        <p className="text-xs text-gray-400">Won</p>
+                      </div>
+                      <div className="rounded border border-gray-800 p-2">
+                        <p className="text-2xl font-bold text-red-400">{stats.lost}</p>
+                        <p className="text-xs text-gray-400">Lost</p>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Games Won:</span>
-                      <span className="text-green-400 font-bold">{player.totalGamesWon}</span>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Single-player runs</span>
+                        <span className="text-white font-bold">{stats.singlePlayer.runs}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Stages cleared</span>
+                        <span className="text-yellow-400 font-bold">{stats.singlePlayer.stagesCleared}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Best score</span>
+                        <span className="text-cyan-400 font-bold">{stats.singlePlayer.bestScore.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">PvP won / lost</span>
+                        <span className="font-bold">
+                          <span className="text-green-400">{stats.pvp.won}</span>
+                          <span className="text-gray-500"> / </span>
+                          <span className="text-red-400">{stats.pvp.lost}</span>
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">PVP Duel Wins:</span>
-                      <span className="text-purple-400 font-bold">{player.totalPvpDuelWins}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Time Trial Wins:</span>
-                      <span className="text-blue-400 font-bold">{player.totalTimeTrialWins}</span>
-                    </div>
+                    <p className="text-xs text-gray-500">
+                      A single-player run counts as a win once it clears a stage (10 levels).
+                      {stats.inProgress > 0 && ' Your latest run is still open, so it is not counted as a loss yet.'}
+                    </p>
                   </div>
+                ) : (
+                  <p className="mt-4 text-xs text-gray-500">Loading your stats…</p>
                 )}
               </div>
             ) : (

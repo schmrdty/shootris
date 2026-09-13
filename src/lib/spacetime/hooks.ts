@@ -29,6 +29,7 @@ export function useSpacetimeDB(wallet: string | null) {
   const [bound, setBound] = useState(false);
   const connectionRef = useRef<DbConnection | null>(null);
   const bindInFlightRef = useRef(false);
+  const walletRef = useRef<string | null>(wallet);
   const { signMessageAsync } = useSignMessage();
 
   const registerPlayer = useCallback((walletAddr: string) => {
@@ -76,17 +77,16 @@ export function useSpacetimeDB(wallet: string | null) {
           'SELECT * FROM match_queue'
         ]);
 
-      // Register table callbacks
+      // Register table callbacks. Read the wallet from a ref: the player
+      // usually connects their wallet AFTER this socket opens, and a closure
+      // over the first render's wallet would never match.
+      const matchesWallet = (row: Player) =>
+        !!walletRef.current && row.wallet.toLowerCase() === walletRef.current.toLowerCase();
       connection.db.players.onInsert((_ctx, newPlayer) => {
-        if (wallet && newPlayer.wallet.toLowerCase() === wallet.toLowerCase()) {
-          setPlayer(newPlayer);
-        }
+        if (matchesWallet(newPlayer)) setPlayer(newPlayer);
       });
-
       connection.db.players.onUpdate((_ctx, _oldPlayer, newPlayer) => {
-        if (wallet && newPlayer.wallet.toLowerCase() === wallet.toLowerCase()) {
-          setPlayer(newPlayer);
-        }
+        if (matchesWallet(newPlayer)) setPlayer(newPlayer);
       });
     };
 
@@ -105,6 +105,25 @@ export function useSpacetimeDB(wallet: string | null) {
       .onDisconnect(onDisconnect)
       .build();
   }, [wallet]);
+
+  // Keep the player row in step with whichever wallet is connected now
+  useEffect(() => {
+    walletRef.current = wallet;
+    const conn = connectionRef.current;
+    if (!connected || !conn || !wallet) {
+      setPlayer(null);
+      return;
+    }
+    const w = wallet.toLowerCase();
+    let found: Player | null = null;
+    for (const row of conn.db.players.iter()) {
+      if (row.wallet.toLowerCase() === w) {
+        found = row;
+        break;
+      }
+    }
+    setPlayer(found);
+  }, [wallet, connected]);
 
   // Register player when wallet connects
   useEffect(() => {

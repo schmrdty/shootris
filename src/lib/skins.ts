@@ -78,11 +78,12 @@ function attrValue(attrs: MetadataAttribute[] | undefined, match: RegExp): strin
 
 function setFromText(text: string): SkinSet | null {
   const t = text.toLowerCase();
-  // Alt-art collector variants win over the base set they riff on
-  if (/collector|alt[\s-]?art|variant|prismatic|golden/.test(t)) return 'collector';
-  if (/earthen|earth/.test(t)) return 'earthen';
-  if (/neon/.test(t)) return 'neon';
-  if (/basic|classic|standard/.test(t)) return 'basic';
+  // Whole words only, so e.g. "Heart" never reads as "earth".
+  // Alt-art collector variants win over the base set they riff on.
+  if (/\b(collector|alt[\s-]?art|variant|prismatic|golden)\b/.test(t)) return 'collector';
+  if (/\b(earthen|earth)\b/.test(t)) return 'earthen';
+  if (/\bneon\b/.test(t)) return 'neon';
+  if (/\b(basic|classic)\b/.test(t)) return 'basic';
   return null;
 }
 
@@ -90,12 +91,12 @@ function pieceFromText(text: string): PieceKey | null {
   const t = text.toLowerCase();
   for (const piece of PIECE_KEYS) {
     for (const nick of NICKNAME_BY_PIECE[piece]) {
-      if (t.includes(nick)) return piece;
+      if (new RegExp('\\b' + nick + '\\b').test(t)) return piece;
     }
   }
-  // Standalone piece letter, e.g. "Neon I" or "T-piece"
-  const m = text.match(/\b([IOTSZJL])\b|\b([IOTSZJL])[\s-]?piece\b/i);
-  const letter = (m?.[1] || m?.[2] || '').toUpperCase();
+  // Piece letter as its own word, e.g. "Neon I", "T-piece", "Earthen (Z)"
+  const m = text.match(/\b([IOTSZJL])(?:[\s-]?piece)?\b/i);
+  const letter = (m?.[1] || '').toUpperCase();
   if (letter && PIECE_KEYS.includes(letter as PieceKey)) return letter as PieceKey;
   return null;
 }

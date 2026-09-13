@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
+import { getChainRegistry } from '@/lib/chains';
 
 // Verifies that the caller's wallet signed a binding message for their
 // SpacetimeDB identity, then attests the binding into the module via the
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
 
     const client = createPublicClient({
       chain: base,
-      transport: http(process.env.BASE_RPC_URL),
+      transport: http(getChainRegistry().base.rpcUrl),
     });
     const valid = await client.verifyMessage({
       address: wallet as `0x${string}`,

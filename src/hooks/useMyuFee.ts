@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { parseUnits, encodeFunctionData, erc20Abi } from 'viem';
-import { useAccount, useReadContract, useSendTransaction } from 'wagmi';
+import { useAccount, useReadContract, useSendTransaction, useSwitchChain } from 'wagmi';
 import { base } from 'wagmi/chains';
 import {
   MYU_TOKEN_ADDRESS,
@@ -17,8 +17,9 @@ import {
  * `feeRequired` is false and `payFee` resolves without sending a transaction.
  */
 export function useMyuFee(amountWholeTokens: string) {
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const { sendTransactionAsync } = useSendTransaction();
+  const { switchChainAsync } = useSwitchChain();
 
   const feeAmount = parseUnits(amountWholeTokens || '0', MYU_DECIMALS);
   const feeRequired = MYU_CONFIGURED && feeAmount > BigInt(0);
@@ -37,6 +38,8 @@ export function useMyuFee(amountWholeTokens: string) {
   const payFee = useCallback(async (): Promise<string | null> => {
     if (!feeRequired) return null;
     if (!address) throw new Error('Wallet not connected');
+    // EOA wallets are often sitting on another network — MYU lives on Base
+    if (chainId !== base.id) await switchChainAsync({ chainId: base.id });
     const txHash = await sendTransactionAsync({
       to: MYU_TOKEN_ADDRESS as `0x${string}`,
       data: encodeFunctionData({
@@ -48,7 +51,7 @@ export function useMyuFee(amountWholeTokens: string) {
     });
     refetchBalance();
     return txHash;
-  }, [feeRequired, address, sendTransactionAsync, feeAmount, refetchBalance]);
+  }, [feeRequired, address, chainId, switchChainAsync, sendTransactionAsync, feeAmount, refetchBalance]);
 
   return { balance, hasEnough, feeRequired, feeAmount, payFee, refetchBalance };
 }

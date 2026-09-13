@@ -20,7 +20,6 @@ import {
 import type { GameState } from '@/lib/tetris/types';
 import { BOARD_WIDTH, BOARD_HEIGHT, OBSTACLE_BAND_HEIGHT } from '@/lib/tetris/types';
 import type { PvpMatch } from '@/spacetime_module_bindings';
-import { InGameMusicControls } from '@/components/InGameMusicControls';
 import { Trophy, Skull } from 'lucide-react';
 import { useGameTheme } from '@/lib/theme';
 
@@ -398,8 +397,6 @@ export default function PvpPlayPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-blue-950 px-4 py-8 pt-16">
-      <InGameMusicControls onNextTrack={() => {}} />
-
       <div className="max-w-7xl mx-auto">
         <div className="mb-4 flex justify-between items-center">
           <Button variant="outline" onClick={() => router.push('/pvp')}>

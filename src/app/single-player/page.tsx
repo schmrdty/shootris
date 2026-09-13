@@ -13,10 +13,11 @@ import { useGameTheme } from '@/lib/theme';
 import type { GameState, BoardSnapshot } from '@/lib/tetris/types';
 import { PAYOUT_SPLIT_ADDRESS, MYU_TOKEN_ADDRESS, MYU_DECIMALS, CONTINUE_PRICE_MYU, MYU_CONFIGURED } from '@/app/config/onchainkit';
 import { parseUnits, encodeFunctionData, erc20Abi } from 'viem';
-import { useSendTransaction, useReadContract } from 'wagmi';
+import { useSendTransaction, useReadContract, useSwitchChain } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { InGameMusicControls } from '@/components/InGameMusicControls';
 import { StageAmbience } from '@/components/StageAmbience';
+import { useMusicPreference } from '@/lib/music';
 import { Wallet, ConnectWallet } from '@coinbase/onchainkit/wallet';
 import { Swap, SwapAmountInput, SwapToggleButton, SwapButton, SwapMessage, SwapToast } from '@coinbase/onchainkit/swap';
 import { MYU_TOKEN, SWAP_FROM_TOKENS } from '@/app/config/onchainkit';
@@ -33,8 +34,16 @@ const levelTimeBudget = (level: number) =>
 
 export default function SinglePlayerPage() {
   const router = useRouter();
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
   const { connection, player } = useSpacetimeDB(address || null);
+  const persistMusic = useCallback(
+    (on: boolean) => {
+      if (connection && address) connection.reducers.setPlayerMusic(address.toLowerCase(), on);
+    },
+    [connection, address]
+  );
+  const [musicOn, setMusicOn] = useMusicPreference(player?.musicOn, persistMusic);
   // Deterministic first render (no random piece) so SSR and client match;
   // the mount effect spawns the real random state client-side.
   const [gameState, setGameState] = useState<GameState>(() => ({ ...createInitialGameState(), nextPiece: null }));
@@ -235,6 +244,8 @@ export default function SinglePlayerPage() {
     if (!address || !lastSnapshot) return;
 
     try {
+      // EOA wallets are often sitting on another network — MYU lives on Base
+      if (chainId !== base.id) await switchChainAsync({ chainId: base.id });
       // Send CONTINUE_PRICE_MYU $MYU to the payout address
       const txHash = await sendTransactionAsync({
         to: MYU_TOKEN_ADDRESS as `0x${string}`,
@@ -276,7 +287,7 @@ export default function SinglePlayerPage() {
       console.error('Payment failed:', error);
       alert('Payment failed. Please try again.');
     }
-  }, [address, lastSnapshot, sendTransactionAsync, connection, runId, gameState, continuePrice, refetchMyuBalance]);
+  }, [address, chainId, switchChainAsync, lastSnapshot, sendTransactionAsync, connection, runId, gameState, continuePrice, refetchMyuBalance]);
 
   const handleQuit = useCallback(() => {
     if (connection && runId) {
@@ -329,18 +340,13 @@ export default function SinglePlayerPage() {
   // Single-player is always available — no wallet required. Connecting a wallet
   // adds score persistence, leaderboards, and $MYU continues.
 
-  const handleNextTrack = useCallback(() => {
-    console.log('Next track requested');
-    // TODO: Implement track switching logic when music player is added
-  }, []);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-blue-950 px-4 py-8 pt-16">
       {/* Per-stage backdrop + music (files load as they're produced) */}
-      <StageAmbience stage={stage} isEarthen={isEarthen} />
+      <StageAmbience stage={stage} isEarthen={isEarthen} muted={!musicOn} />
 
       {/* In-Game Music Controls */}
-      <InGameMusicControls onNextTrack={handleNextTrack} />
+      <InGameMusicControls musicOn={musicOn} onToggle={setMusicOn} />
 
       {/* Mode chooser — shown until the player picks how to play */}
       {mode === null && (
