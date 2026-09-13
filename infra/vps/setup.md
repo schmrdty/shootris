@@ -7,7 +7,7 @@ Tailscale. No app code, no certificates, no secrets. Any ~€3/mo instance
 > **Two user-data files, pick one:**
 > [cloud-init-cohost.yaml](cloud-init-cohost.yaml) — the box hosts the game
 > containers itself and Caddy issues the certificates. No nginx, no tunnel.
-> This is the one for keen-fish.
+> This is the one for schmidtiest.
 > [cloud-init.yaml](cloud-init.yaml) — the passthrough front-door pattern
 > below, where TLS terminates elsewhere.
 

@@ -1,6 +1,6 @@
 # Co-hosting Shootris behind an existing Caddy
 
-Use this when the target server **already runs Caddy** (as keen-fish does,
+Use this when the target server **already runs Caddy** (as schmidtiest does,
 serving wally./admin.). Caddy already owns :80 and :443, so Traefik cannot
 also bind them — the game container listens on localhost only and Caddy
 reverse-proxies to it. Nothing already on the box is disturbed.
@@ -15,7 +15,7 @@ caddy validate --config /etc/caddy/Caddyfile
 ## 2. Run the game container, bound to localhost
 
 ```bash
-cd ~/apps/shootris/infra
+cd ~/shootris/infra
 docker compose -f docker-compose.cohost.yml up -d --build
 curl -I http://127.0.0.1:3000     # expect 200
 ```

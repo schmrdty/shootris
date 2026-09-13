@@ -3,7 +3,7 @@
 # terminates TLS with Caddy. No nginx, no tunnel — Caddy issues and renews
 # every certificate and routes by hostname.
 #
-# Use this one when the box IS the destination (keen-fish).
+# Use this one when the box IS the destination (schmidtiest).
 # Use cloud-init.yaml instead only for the passthrough front-door pattern.
 #
 # After boot:

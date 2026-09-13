@@ -50,6 +50,13 @@ export function getChainRegistry(): Record<string, ChainEntry> {
       chainId: 1,
       rpcUrl: env('ETHEREUM_RPC_URL') || alchemy('eth-mainnet') || 'https://eth.llamarpc.com',
     },
+    optimism: {
+      type: 'evm',
+      // Farcaster's KeyRegistry lives here (webhook signature checks)
+      name: 'OP Mainnet',
+      chainId: 10,
+      rpcUrl: env('OPTIMISM_RPC_URL') || alchemy('opt-mainnet') || 'https://mainnet.optimism.io',
+    },
     robinhood: {
       type: 'evm',
       // Arbitrum Orbit L2, ETH gas. Details: https://docs.robinhood.com/chain/connecting

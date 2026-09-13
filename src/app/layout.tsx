@@ -24,29 +24,37 @@ export default function RootLayout({
 
 const SITE = `https://${process.env.NEXT_PUBLIC_HOST || 'shootris.schmidtiest.xyz'}`;
 
+// Cast embed card: 3:2 preview image + launch button. fc:miniapp is the
+// current tag; fc:frame is kept for older clients (same card, legacy action).
+const embed = (actionType: 'launch_miniapp' | 'launch_frame') =>
+  JSON.stringify({
+    version: '1',
+    imageUrl: `${SITE}/brand/preview.png`,
+    button: {
+      title: 'Play Shootris',
+      action: {
+        type: actionType,
+        name: 'Shootris',
+        url: SITE,
+        splashImageUrl: `${SITE}/brand/splash.png`,
+        splashBackgroundColor: '#0a0e27',
+      },
+    },
+  });
+
 export const metadata: Metadata = {
-        metadataBase: new URL(SITE),
-        openGraph: {
-          title: "Shootris — Inverted Tetris",
-          description: "Blocks rise instead of fall. Solo journey, PvP duels, and $MYU continues.",
-          images: ["/brand/og.png"],
-        },
-        twitter: { card: "summary_large_image", images: ["/brand/og.png"] },
-        title: "Shootris Inverted Tetris",
-        description: "Experience an exciting twist on Tetris where blocks rise! Engage in solo play or PVP duels in a seamless, cross-platform mini-app. Spend $MYU to continue your run. Join now and defy gravity!",
-        other: { "fc:frame": JSON.stringify({
-          "version": "next",
-          "imageUrl": `${SITE}/brand/og.png`,
-          "button": {
-            "title": "Play Shootris",
-            "action": {
-              "type": "launch_frame",
-              "name": "Shootris Inverted Tetris",
-              "url": SITE,
-              "splashImageUrl": `${SITE}/brand/splash.png`,
-              "splashBackgroundColor": "#0a0e27"
-            }
-          }
-        }
-        ) }
-    };
+  metadataBase: new URL(SITE),
+  title: 'Shootris Inverted Tetris',
+  description:
+    'Experience an exciting twist on Tetris where blocks rise! Engage in solo play or PVP duels in a seamless, cross-platform mini-app. Spend $MYU to continue your run. Join now and defy gravity!',
+  openGraph: {
+    title: 'Shootris — Inverted Tetris',
+    description: 'Blocks rise instead of fall. Solo journey, PvP duels, and $MYU continues.',
+    images: [{ url: '/brand/share.png', width: 1200, height: 630 }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/brand/share.png'] },
+  other: {
+    'fc:miniapp': embed('launch_miniapp'),
+    'fc:frame': embed('launch_frame'),
+  },
+};

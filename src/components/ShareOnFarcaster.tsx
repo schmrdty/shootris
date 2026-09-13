@@ -1,23 +1,25 @@
 'use client';
 
+import { sdk } from '@farcaster/miniapp-sdk';
 import { Button } from '@/components/ui/button';
 import { useIsInFarcaster } from '@/hooks/useIsInFarcaster';
+import { castShareUrl, DEFAULT_CAST_TEXT, SITE_URL } from '@/lib/share';
 import { Share2 } from 'lucide-react';
 
-export function ShareOnFarcaster() {
+export function ShareOnFarcaster({ text = DEFAULT_CAST_TEXT }: { text?: string }) {
   const isInFarcaster = useIsInFarcaster();
 
-  const handleShare = () => {
-    const text = encodeURIComponent('Playing Shootris - Inverted Tetris! Join me on this epic challenge where pieces rise from the bottom!');
-    const url = encodeURIComponent(window.location.origin);
-    
+  const handleShare = async () => {
     if (isInFarcaster) {
-      // Use Farcaster Composer within the app
-      window.open(`https://warpcast.com/~/compose?text=${text}&embeds[]=${url}`, '_blank');
-    } else {
-      // Open Warpcast web composer
-      window.open(`https://warpcast.com/~/compose?text=${text}&embeds[]=${url}`, '_blank');
+      // Native composer inside Farcaster / the Base App
+      try {
+        await sdk.actions.composeCast({ text, embeds: [SITE_URL] });
+        return;
+      } catch {
+        // Older clients without composeCast fall through to the web composer
+      }
     }
+    window.open(castShareUrl(text), '_blank', 'noopener');
   };
 
   return (

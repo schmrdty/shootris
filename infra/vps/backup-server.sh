@@ -2,7 +2,7 @@
 # Full pre-reinstall backup of a server: every project plus the config that
 # explains how they ran. Excludes only what can be regenerated.
 #
-#   sudo bash backup-server.sh [outdir]     # default /home/builder/backup
+#   sudo bash backup-server.sh [outdir]     # default /home/buidler/backup
 #
 # THIS ARCHIVE CONTAINS SECRETS (.env files, keys, tokens) — that is
 # deliberate, because it is a RESTORE backup, not something to share.
@@ -10,7 +10,7 @@
 # anything you intend to publish.
 set -uo pipefail
 
-OUT="${1:-/home/builder/backup}"
+OUT="${1:-/home/buidler/backup}"
 STAMP="$(date +%F)"
 mkdir -p "$OUT"
 
@@ -57,13 +57,13 @@ archive nginx     /etc   nginx                    # if present
   echo; echo "## Root crontab"
   crontab -l 2>/dev/null || echo "(none)"
   echo; echo "## PM2 processes"
-  sudo -u builder pm2 jlist 2>/dev/null || pm2 jlist 2>/dev/null || echo "(pm2 unavailable)"
+  sudo -u buidler pm2 jlist 2>/dev/null || pm2 jlist 2>/dev/null || echo "(pm2 unavailable)"
   echo; echo "## Manually installed packages"
   apt-mark showmanual 2>/dev/null
 } > "$OUT/system-state-${STAMP}.txt"
 echo "-> wrote system-state-${STAMP}.txt"
 
-chown -R builder:builder "$OUT" 2>/dev/null
+chown -R buidler:buidler "$OUT" 2>/dev/null
 
 echo
 echo "=== Result ==="
@@ -72,7 +72,7 @@ echo
 echo "Total: $(du -sh "$OUT" | cut -f1)"
 echo
 echo "Pull to your machine, then VERIFY sizes before reinstalling:"
-echo "  scp 'builder@<server>:${OUT}/*' ."
+echo "  scp 'buidler@<server>:${OUT}/*' ."
 echo
 echo "Check an archive is readable without extracting:"
 echo "  tar -tzf srv-${STAMP}.tar.gz | head"

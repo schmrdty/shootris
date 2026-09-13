@@ -22,7 +22,7 @@ Setup order: [vps/setup.md](vps/setup.md) → [home/setup.md](home/setup.md).
 
 ## Option B: co-host on a server you already have
 
-If the target box **already runs a reverse proxy** (keen-fish runs Caddy for
+If the target box **already runs a reverse proxy** (schmidtiest runs Caddy for
 wally./admin.), skip the tunnel entirely: run the game container bound to
 localhost and add one block to the existing Caddyfile. Nothing already on
 the box is disturbed, and there is no second proxy fighting for :80/:443.

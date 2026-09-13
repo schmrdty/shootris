@@ -36,3 +36,6 @@ cX/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Local app data (notification tokens)
+/data

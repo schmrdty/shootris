@@ -8,7 +8,7 @@
 # SECRETS ARE EXCLUDED: .env files, key material, and credential stores are
 # skipped, and the manifest lists what was skipped so nothing looks missing.
 #
-#   bash capture-project-evidence.sh /home/builder/ohara [outdir]
+#   bash capture-project-evidence.sh /home/buidler/ohara [outdir]
 set -uo pipefail
 
 SRC="${1:?usage: capture-project-evidence.sh <project-dir> [outdir]}"
