@@ -80,7 +80,7 @@ function setFromText(text: string): SkinSet | null {
   const t = text.toLowerCase();
   // Whole words only, so e.g. "Heart" never reads as "earth".
   // Alt-art collector variants win over the base set they riff on.
-  if (/\b(collector|alt[\s-]?art|variant|prismatic|golden)\b/.test(t)) return 'collector';
+  if (/\b(collector|alt[\s-]?art|variant|prism|prismatic|golden)\b/.test(t)) return 'collector';
   if (/\b(earthen|earth)\b/.test(t)) return 'earthen';
   if (/\bneon\b/.test(t)) return 'neon';
   if (/\b(basic|classic)\b/.test(t)) return 'basic';
