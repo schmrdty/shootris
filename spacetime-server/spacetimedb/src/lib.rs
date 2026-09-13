@@ -875,10 +875,10 @@ pub fn complete_pvp_match(ctx: &ReducerContext, match_id: u64, winner_wallet: St
         let p1 = m.player1_wallet.clone();
         let p2_opt = m.player2_wallet.clone();
 
-        // Increment total games for both participants (if second exists)
-        increment_player_counters(ctx, &p1, true, false, true);
+        // Both participants played; only the winner gets the win
+        increment_player_counters(ctx, &p1, true, winner_is_p1, winner_is_p1);
         if let Some(p2) = p2_opt.clone() {
-            increment_player_counters(ctx, &p2, true, false, true);
+            increment_player_counters(ctx, &p2, true, winner_is_p2, winner_is_p2);
         }
 
         // Update PvP leaderboard stats per mode
