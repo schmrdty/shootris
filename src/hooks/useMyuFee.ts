@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { parseUnits, encodeFunctionData, erc20Abi } from 'viem';
 import { useAccount, useReadContract, useSendTransaction, useSwitchChain } from 'wagmi';
 import { base } from 'wagmi/chains';
@@ -35,22 +35,31 @@ export function useMyuFee(amountWholeTokens: string) {
 
   const hasEnough = !feeRequired || (balance ?? BigInt(0)) >= feeAmount;
 
+  // Refuse a second payment while one is still awaiting the wallet
+  const payingRef = useRef(false);
+
   const payFee = useCallback(async (): Promise<string | null> => {
     if (!feeRequired) return null;
     if (!address) throw new Error('Wallet not connected');
-    // EOA wallets are often sitting on another network — MYU lives on Base
-    if (chainId !== base.id) await switchChainAsync({ chainId: base.id });
-    const txHash = await sendTransactionAsync({
-      to: MYU_TOKEN_ADDRESS as `0x${string}`,
-      data: encodeFunctionData({
-        abi: erc20Abi,
-        functionName: 'transfer',
-        args: [PAYOUT_SPLIT_ADDRESS as `0x${string}`, feeAmount],
-      }),
-      chainId: base.id,
-    });
-    refetchBalance();
-    return txHash;
+    if (payingRef.current) throw new Error('A payment is already in progress');
+    payingRef.current = true;
+    try {
+      // EOA wallets are often sitting on another network — MYU lives on Base
+      if (chainId !== base.id) await switchChainAsync({ chainId: base.id });
+      const txHash = await sendTransactionAsync({
+        to: MYU_TOKEN_ADDRESS as `0x${string}`,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [PAYOUT_SPLIT_ADDRESS as `0x${string}`, feeAmount],
+        }),
+        chainId: base.id,
+      });
+      refetchBalance();
+      return txHash;
+    } finally {
+      payingRef.current = false;
+    }
   }, [feeRequired, address, chainId, switchChainAsync, sendTransactionAsync, feeAmount, refetchBalance]);
 
   return { balance, hasEnough, feeRequired, feeAmount, payFee, refetchBalance };

@@ -49,6 +49,10 @@ export default function SinglePlayerPage() {
   const [gameState, setGameState] = useState<GameState>(() => ({ ...createInitialGameState(), nextPiece: null }));
   const [runId, setRunId] = useState<bigint | null>(null);
   const [showContinueModal, setShowContinueModal] = useState(false);
+  // One continue = one payment. The lock is a ref so a second tap in the same
+  // frame is refused too; the state drives the disabled buttons.
+  const payingRef = useRef(false);
+  const [paying, setPaying] = useState(false);
   const [lastSnapshot, setLastSnapshot] = useState<BoardSnapshot | null>(null);
   const [mode, setMode] = useState<PlayMode | null>(null);
   const [runNonce, setRunNonce] = useState(0);
@@ -241,7 +245,9 @@ export default function SinglePlayerPage() {
   }, [gameState.gameOver]);
 
   const handlePayAndContinue = useCallback(async () => {
-    if (!address || !lastSnapshot) return;
+    if (!address || !lastSnapshot || payingRef.current) return;
+    payingRef.current = true;
+    setPaying(true);
 
     try {
       // EOA wallets are often sitting on another network — MYU lives on Base
@@ -286,6 +292,9 @@ export default function SinglePlayerPage() {
     } catch (error) {
       console.error('Payment failed:', error);
       alert('Payment failed. Please try again.');
+    } finally {
+      payingRef.current = false;
+      setPaying(false);
     }
   }, [address, chainId, switchChainAsync, lastSnapshot, sendTransactionAsync, connection, runId, gameState, continuePrice, refetchMyuBalance]);
 
@@ -540,7 +549,13 @@ export default function SinglePlayerPage() {
       )}
 
       {/* Continue Modal */}
-      <Dialog open={showContinueModal} onOpenChange={setShowContinueModal}>
+      <Dialog
+        open={showContinueModal}
+        // Closing mid-payment would let the dialog reopen with a live Pay button
+        onOpenChange={(open) => {
+          if (!payingRef.current) setShowContinueModal(open);
+        }}
+      >
         <DialogContent className="bg-gray-900 border-purple-500 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl text-purple-400">Game Over!</DialogTitle>
@@ -551,7 +566,7 @@ export default function SinglePlayerPage() {
           <div className="py-4 space-y-4">
             {address ? (
               <p className="text-center text-white">
-                Continue from just before you failed for <span className="text-green-400 font-bold">{CONTINUE_PRICE_MYU} $MYU</span> on Base?
+                Continue from just before you failed for <span className="text-green-400 font-bold">{Number(CONTINUE_PRICE_MYU).toLocaleString()} $MYU</span> on Base?
               </p>
             ) : (
               <div className="space-y-3">
@@ -593,15 +608,15 @@ export default function SinglePlayerPage() {
             </p>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={handleQuit} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={handleQuit} disabled={paying} className="w-full sm:w-auto">
               Quit
             </Button>
-            <Button variant="outline" onClick={startNewRun} className="w-full sm:w-auto border-purple-500 text-purple-400">
+            <Button variant="outline" onClick={startNewRun} disabled={paying} className="w-full sm:w-auto border-purple-500 text-purple-400">
               New Game
             </Button>
-            {address && hasEnoughMyu && (
-              <Button onClick={handlePayAndContinue} className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
-                Pay {CONTINUE_PRICE_MYU} $MYU & Continue
+            {address && (hasEnoughMyu || paying) && (
+              <Button onClick={handlePayAndContinue} disabled={paying} className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
+                {paying ? 'Confirm in your wallet…' : `Pay ${Number(CONTINUE_PRICE_MYU).toLocaleString()} $MYU & Continue`}
               </Button>
             )}
           </DialogFooter>

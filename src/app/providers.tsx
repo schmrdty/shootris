@@ -11,6 +11,7 @@ import { createPublicClient } from 'viem';
 import { ONCHAINKIT_API_KEY, ONCHAINKIT_PROJECT_ID } from './config/onchainkit';
 import { GameThemeProvider } from '@/lib/theme';
 import { CollectionProvider } from '@/lib/collection';
+import { WalletReconnect } from '@/components/WalletReconnect';
 
 // Connector order matters: OnchainKit's MiniKit auto-connects connectors[0]
 // when running inside a Farcaster/Base mini app, so the embedded wallet goes
@@ -56,7 +57,8 @@ const queryClient = new QueryClient({
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <WagmiProvider config={wagmiConfig}>
+    // reconnectOnMount off: WalletReconnect decides (see why there)
+    <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
       <QueryClientProvider client={queryClient}>
         <OnchainKitProvider
           apiKey={ONCHAINKIT_API_KEY}
@@ -84,6 +86,7 @@ export function Providers({ children }: { children: ReactNode }) {
             autoConnect: true,
           }}
         >
+          <WalletReconnect />
           <CollectionProvider>
             <GameThemeProvider>{children}</GameThemeProvider>
           </CollectionProvider>

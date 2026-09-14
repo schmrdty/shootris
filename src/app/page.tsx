@@ -10,7 +10,9 @@ import { useQuickAuth } from "@/hooks/useQuickAuth";
 import { useIsInFarcaster } from "@/hooks/useIsInFarcaster";
 import { WalletConnect } from '@/components/wallet-connect';
 import { ShareOnFarcaster } from '@/components/ShareOnFarcaster';
-import { ChevronsUp, Gamepad2, Swords, Trophy, Settings, BookOpen, TriangleAlert } from 'lucide-react';
+import { ChevronsUp, Gamepad2, Swords, Trophy, Settings, BookOpen, TriangleAlert, Sparkles, ExternalLink as ExternalLinkIcon } from 'lucide-react';
+import { ExternalLink } from '@/components/ExternalLink';
+import { SHOOTRIS_CARDS } from '@/app/config/onchainkit';
 import { SkinUnlockPrompt } from '@/components/SkinUnlockPrompt';
 import { ShootrisLogo } from '@/components/ShootrisLogo';
 
@@ -50,21 +52,9 @@ export default function Home() {
     loadFarcasterContext();
   }, []);
 
-  if (status === 'connecting' || status === 'reconnecting') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-black to-blue-900 px-4">
-        <Card className="w-full max-w-md bg-black/80 border-purple-500/50">
-          <CardHeader>
-            <CardTitle className="text-center">
-              <ShootrisLogo className="w-full max-w-[200px] h-auto mx-auto select-none" />
-              <span className="sr-only">Shootris</span>
-            </CardTitle>
-            <CardDescription className="text-center">Preparing smart wallet...</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
+  // Never block the page on wallet state: in some hosts a wallet can sit in
+  // "connecting" indefinitely, and the menu works without one anyway.
+  const walletPending = status === 'connecting' || status === 'reconnecting';
 
   // Allow viewing menu without wallet - only require wallet for gameplay
 
@@ -113,6 +103,8 @@ export default function Home() {
                   </p>
                 )}
               </div>
+            ) : walletPending ? (
+              <p className="text-center text-lg font-bold text-cyan-300">Connecting wallet…</p>
             ) : (
               <div className="text-center space-y-4">
                 <p className="text-lg sm:text-2xl font-black text-yellow-300 tracking-wide neon-yellow flex items-center justify-center gap-2">
@@ -205,6 +197,32 @@ export default function Home() {
             </Card>
           </Link>
         </div>
+
+        {/* Card collection */}
+        <Card className="bg-black/70 border-3 border-yellow-500/60">
+          <CardHeader>
+            <CardTitle className="text-2xl font-black text-yellow-300 tracking-wide flex items-center gap-3">
+              <Sparkles className="h-7 w-7" aria-hidden="true" /> COLLECT THE CARDS
+            </CardTitle>
+            <CardDescription className="text-base font-semibold text-gray-300">
+              Collect all 7 cards of a set to unlock its piece skins in game. Collect all 28 to unlock every set.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <ExternalLink
+              href={SHOOTRIS_CARDS.vibeMarketUrl}
+              className="flex items-center justify-center gap-2 rounded-lg border-2 border-yellow-500 px-4 py-3 font-bold text-yellow-200 hover:bg-yellow-500/10"
+            >
+              Open packs on vibe.market <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
+            </ExternalLink>
+            <ExternalLink
+              href={SHOOTRIS_CARDS.openSeaUrl}
+              className="flex items-center justify-center gap-2 rounded-lg border-2 border-cyan-500 px-4 py-3 font-bold text-cyan-200 hover:bg-cyan-500/10"
+            >
+              Trade cards on OpenSea <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
+            </ExternalLink>
+          </CardContent>
+        </Card>
 
         {/* Info Cards */}
         <div className="grid gap-6 md:grid-cols-1">

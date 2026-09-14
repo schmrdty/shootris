@@ -12,8 +12,8 @@ export const SPACETIME_IDENTITY = 'c20030f936d903511ff3c178726a88a1faa2ec2354d07
 // $MYU — set NEXT_PUBLIC_MYU_TOKEN_ADDRESS to the MYU contract on Base
 export const MYU_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_MYU_TOKEN_ADDRESS || '0x0000000000000000000000000000000000000000';
 export const MYU_DECIMALS = Number(process.env.NEXT_PUBLIC_MYU_DECIMALS || 18);
-// Whole-token price of one continue, e.g. '100' = 100 MYU (either env name works)
-export const CONTINUE_PRICE_MYU = process.env.NEXT_PUBLIC_CONTINUE_PRICE_MYU || process.env.NEXT_PUBLIC_CONTINUE_PRICE || '100';
+// Whole-token price of one continue, e.g. '10000' = 10,000 MYU (either env name works)
+export const CONTINUE_PRICE_MYU = process.env.NEXT_PUBLIC_CONTINUE_PRICE_MYU || process.env.NEXT_PUBLIC_CONTINUE_PRICE || '10000';
 // Whole-token PvP entry fee per match/queue entry; '0' disables the fee
 export const PVP_ENTRY_FEE_MYU = process.env.NEXT_PUBLIC_PVP_ENTRY_FEE_MYU || '0';
 
@@ -26,6 +26,9 @@ export const SHOOTRIS_CARDS = {
   contract: '0x0C197b162b3b28056e3539a924C1b266B49B7911',
   // Pack launch block; no card can predate it, so ownership scans start here
   fromBlock: 63_098_219,
+  // Where players get cards: packs on vibe.market, opened cards on OpenSea
+  vibeMarketUrl: 'https://vibechain.com/market/packs/shootris',
+  openSeaUrl: 'https://opensea.io/collection/shootris',
 } as const;
 // Chain key must exist in src/lib/chains.ts
 export const COLLECTION_CHAIN = process.env.NEXT_PUBLIC_COLLECTION_CHAIN || SHOOTRIS_CARDS.chain;

@@ -16,6 +16,8 @@ import { useCallback } from 'react';
 import { useMusicPreference } from '@/lib/music';
 import { usePlayerStats } from '@/lib/spacetime/stats';
 import { PlayerName } from '@/components/PlayerName';
+import { ExternalLink } from '@/components/ExternalLink';
+import { SHOOTRIS_CARDS } from '@/app/config/onchainkit';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -81,6 +83,14 @@ export default function SettingsPage() {
               Collect all 7 cards of a set on vibe.market to unlock it in game. Collect all 28 to
               unlock every set.
             </p>
+            <div className="flex flex-wrap gap-3 text-sm font-bold">
+              <ExternalLink href={SHOOTRIS_CARDS.vibeMarketUrl} className="text-yellow-300 underline hover:text-yellow-200">
+                Packs on vibe.market
+              </ExternalLink>
+              <ExternalLink href={SHOOTRIS_CARDS.openSeaUrl} className="text-cyan-300 underline hover:text-cyan-200">
+                Cards on OpenSea
+              </ExternalLink>
+            </div>
 
             {!address ? (
               <p className="text-sm text-yellow-400">
