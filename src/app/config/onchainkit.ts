@@ -17,10 +17,20 @@ export const CONTINUE_PRICE_MYU = process.env.NEXT_PUBLIC_CONTINUE_PRICE_MYU || 
 // Whole-token PvP entry fee per match/queue entry; '0' disables the fee
 export const PVP_ENTRY_FEE_MYU = process.env.NEXT_PUBLIC_PVP_ENTRY_FEE_MYU || '0';
 
-// Shootris card collection on vibe.market — holding any card unlocks the
-// collector piece skins in-game. Chain key must exist in src/lib/chains.ts.
-export const COLLECTION_CHAIN = process.env.NEXT_PUBLIC_COLLECTION_CHAIN || 'robinhood';
-export const COLLECTION_CONTRACT = process.env.NEXT_PUBLIC_COLLECTION_CONTRACT || '';
+// The live Shootris card collection (vibe.market, Robinhood Chain). Cards are
+// minted into this ERC-721 when a pack is opened; unopened packs are the
+// separate SHOOTRIS ERC-20 (0x16a4A2C3ec9313A17351383860efDC6b7ABeBc5a) and
+// don't count. Env vars override both for a future collection.
+export const SHOOTRIS_CARDS = {
+  chain: 'robinhood',
+  contract: '0x0C197b162b3b28056e3539a924C1b266B49B7911',
+  // Pack launch block; no card can predate it, so ownership scans start here
+  fromBlock: 63_098_219,
+} as const;
+// Chain key must exist in src/lib/chains.ts
+export const COLLECTION_CHAIN = process.env.NEXT_PUBLIC_COLLECTION_CHAIN || SHOOTRIS_CARDS.chain;
+export const COLLECTION_CONTRACT = process.env.NEXT_PUBLIC_COLLECTION_CONTRACT || SHOOTRIS_CARDS.contract;
+
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 // Both must be real: paying to the zero address would revert (or burn)
 export const MYU_CONFIGURED = MYU_TOKEN_ADDRESS !== ZERO_ADDRESS && PAYOUT_SPLIT_ADDRESS !== ZERO_ADDRESS;

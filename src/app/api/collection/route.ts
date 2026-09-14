@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createPublicClient, http, isAddress, parseAbi, parseAbiItem } from 'viem';
 import { getChainRegistry, isChainConfigured } from '@/lib/chains';
 import { parseCardToSkin, type OwnedCard } from '@/lib/skins';
+import { SHOOTRIS_CARDS } from '@/app/config/onchainkit';
 
 // Lists the Shootris cards a wallet holds and maps them to piece skins.
 // Works against an UNMODIFIED third-party collection (vibe.market): it only
@@ -83,7 +84,12 @@ export async function POST(req: Request) {
     // Many public RPCs cap getLogs block ranges, so fall back to chunked
     // scanning if the single full-range query is rejected.
     const fromBlockEnv = process.env.COLLECTION_FROM_BLOCK;
-    const startBlock = fromBlockEnv ? BigInt(fromBlockEnv) : BigInt(0);
+    const isShootrisCards = contract.toLowerCase() === SHOOTRIS_CARDS.contract.toLowerCase();
+    const startBlock = fromBlockEnv
+      ? BigInt(fromBlockEnv)
+      : isShootrisCards
+        ? BigInt(SHOOTRIS_CARDS.fromBlock)
+        : BigInt(0);
     const logFilter = {
       address: contract as `0x${string}`,
       event: transferEvent,

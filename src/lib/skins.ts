@@ -66,11 +66,23 @@ interface MetadataAttribute {
   value?: unknown;
 }
 
-function attrValue(attrs: MetadataAttribute[] | undefined, match: RegExp): string | null {
+/**
+ * Parse the first trait that yields a result, checking trait names in
+ * priority order (not metadata order). vibe.market cards carry both
+ * "Set: Neon" and "Edition: First Edition", so "set" must win outright.
+ */
+function fromAttrs<T>(
+  attrs: MetadataAttribute[] | undefined,
+  traitNames: string[],
+  parse: (text: string) => T | null
+): T | null {
   if (!Array.isArray(attrs)) return null;
-  for (const a of attrs) {
-    if (typeof a?.trait_type === 'string' && match.test(a.trait_type)) {
-      return String(a.value ?? '').trim();
+  for (const trait of traitNames) {
+    for (const a of attrs) {
+      if (typeof a?.trait_type === 'string' && a.trait_type.trim().toLowerCase() === trait) {
+        const parsed = parse(String(a.value ?? '').trim());
+        if (parsed) return parsed;
+      }
     }
   }
   return null;
@@ -111,11 +123,10 @@ export function parseCardToSkin(
   attributes?: MetadataAttribute[],
   rarityCode?: number
 ): { set: SkinSet; piece: PieceKey } | null {
-  const setAttr = attrValue(attributes, /^(set|collection|series|edition)$/i);
-  const pieceAttr = attrValue(attributes, /^(piece|tetromino|shape|block)$/i);
-
-  const set = (setAttr && setFromText(setAttr)) || setFromText(name);
-  const piece = (pieceAttr && pieceFromText(pieceAttr)) || pieceFromText(name);
+  const set =
+    fromAttrs(attributes, ['set', 'collection', 'series', 'edition'], setFromText) || setFromText(name);
+  const piece =
+    fromAttrs(attributes, ['piece', 'tetromino', 'shape', 'block'], pieceFromText) || pieceFromText(name);
   if (!piece) return null;
 
   // Rarity is recorded but never used to infer a set: under "collect all 7"
