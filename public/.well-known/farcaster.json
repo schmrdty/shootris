@@ -1,13 +1,23 @@
 {
+  "accountAssociation": {
+    "header": "eyJmaWQiOjIxMzMxMCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDczODVFMUE4MjRBNDA1Y0JCMTNCNjQ4MjlCRjE1MDljZDJBNDcxZjcifQ",
+    "payload": "eyJkb21haW4iOiJzaG9vdHJpcy5zY2htaWR0aWVzdC54eXoifQ",
+    "signature": "2nb9wa3hcfo7UVXP+JxErNB6G2tZ+7aVzTfFNRHYD6pAm+/N4s1y1zx6O9ELkkuAUdCf2L+paNErhTx/WD6miRs="
+  },
   "miniapp": {
     "version": "1",
     "name": "Shootris",
-    "iconUrl": "https://shootris.schmidtiest.xyz/brand/icon-512.png",
+    "iconUrl": "https://shootris.schmidtiest.xyz/brand/icon-1024.png",
     "homeUrl": "https://shootris.schmidtiest.xyz",
-    "imageUrl": "https://shootris.schmidtiest.xyz/brand/og.png",
+    "imageUrl": "https://shootris.schmidtiest.xyz/brand/preview.png",
     "buttonTitle": "Play Shootris",
     "splashImageUrl": "https://shootris.schmidtiest.xyz/brand/splash.png",
     "splashBackgroundColor": "#0a0e27",
+    "webhookUrl": "https://shootris.schmidtiest.xyz/api/webhook",
+    "screenshotUrls": [
+      "https://shootris.schmidtiest.xyz/brand/screenshot-home.jpg"
+    ],
+    "primaryCategory": "games",
     "tags": [
       "tetris",
       "arcade",
@@ -15,23 +25,13 @@
       "base",
       "d3myur"
     ],
-    "primaryCategory": "entertainment",
     "ogTitle": "Shootris",
-    "ogImageUrl": "https://shootris.schmidtiest.xyz/brand/og.png",
-    "supportedPlatforms": [
-      "web",
-      "farcaster",
-      "base"
-    ]
+    "ogImageUrl": "https://shootris.schmidtiest.xyz/brand/share.png",
+    "castShareUrl": "https://shootris.schmidtiest.xyz"
   },
   "baseBuilder": {
     "allowedAddresses": [
       "0xd9c44586c2f5F3381f4b70f0d21e33Ab8714ab9A"
     ]
-  },
-  "accountAssociation": {
-    "header": "eyJmaWQiOjIxMzMxMCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDczODVFMUE4MjRBNDA1Y0JCMTNCNjQ4MjlCRjE1MDljZDJBNDcxZjcifQ",
-    "payload": "eyJkb21haW4iOiJhbHJlYWR5LXZhbHVhYmxlLTk5OS5hcHAub2hhcmEuYWkifQ",
-    "signature": "QTxcirdQjLiB7RuwxRPH/fMoFax3TdPR9mBb6TItSNYAMlyr93FDut1kMKQwX1geaVpam5VOs1WCZeoyCY+scBs="
   }
 }
