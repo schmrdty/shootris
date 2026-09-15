@@ -6,3 +6,4 @@ spacetime-server/spacetimedb/target
 .dockerignore
 Dockerfile
 docker-compose.yml
+data

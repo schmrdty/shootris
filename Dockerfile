@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Shootris — self-hosted deployment image
 # Build:  docker build -t shootris .
 # Run:    docker run -d -p 3000:3000 --name shootris shootris
@@ -10,7 +11,9 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --ignore-scripts
+# pnpm's package store persists between builds, so a lockfile change only
+# downloads what actually changed
+RUN --mount=type=cache,id=shootris-pnpm-store,target=/root/.local/share/pnpm/store     pnpm install --frozen-lockfile --ignore-scripts
 
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -18,7 +21,10 @@ RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1 BUILD_STANDALONE=1
-RUN pnpm build
+# Keep Next's webpack cache between builds. Without it every deploy compiles
+# the wallet libraries from scratch; with it, compile time roughly halves.
+# Reset with: sudo docker builder prune --filter id=shootris-next-cache
+RUN --mount=type=cache,id=shootris-next-cache,target=/app/.next/cache     pnpm build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
