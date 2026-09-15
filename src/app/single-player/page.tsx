@@ -533,7 +533,7 @@ export default function SinglePlayerPage() {
                 </p>
                 {process.env.NEXT_PUBLIC_MILESTONE_NFT_URL ? (
                   <a href={process.env.NEXT_PUBLIC_MILESTONE_NFT_URL} target="_blank" rel="noopener noreferrer">
-                    <Button className="w-full mt-2 bg-yellow-600 hover:bg-yellow-700">Mint Your NFT</Button>
+                    <Button className="w-full mt-2 bg-yellow-600 hover:bg-yellow-700 text-white">Mint Your NFT</Button>
                   </a>
                 ) : (
                   <p className="text-xs text-gray-500 mt-2">Mint page coming soon.</p>
@@ -684,7 +684,7 @@ export default function SinglePlayerPage() {
               New Game
             </Button>
             {address && (hasEnoughMyu || paying) && (
-              <Button onClick={handlePayAndContinue} disabled={paying} className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
+              <Button onClick={handlePayAndContinue} disabled={paying} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
                 {paying ? 'Confirm in your wallet…' : `Pay ${Number(CONTINUE_PRICE_MYU).toLocaleString()} $MYU & Continue`}
               </Button>
             )}

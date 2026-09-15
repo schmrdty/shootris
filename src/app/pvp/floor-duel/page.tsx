@@ -208,13 +208,13 @@ export default function FloorDuelPage() {
           <Card className="bg-black/80 border-cyan-500/50 p-6" style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.2)' }}>
             <h3 className="text-xl font-bold text-cyan-400 mb-4">Create New Match</h3>
             <div className="space-y-3">
-              <Button onClick={createMatch} className="w-full bg-cyan-600 hover:bg-cyan-700">
+              <Button onClick={createMatch} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white">
                 Quick Match
               </Button>
               <Button onClick={createMatchWithCode} variant="outline" className="w-full border-cyan-500 text-cyan-400">
                 Create with Invite Code
               </Button>
-              <Button onClick={joinQueue} disabled={inQueue} className="w-full bg-purple-600 hover:bg-purple-700">
+              <Button onClick={joinQueue} disabled={inQueue} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
                 {inQueue ? 'In Queue...' : 'Join Queue'}
               </Button>
               {inQueue && (
@@ -236,7 +236,7 @@ export default function FloorDuelPage() {
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 className="bg-gray-900 border-purple-500"
               />
-              <Button onClick={joinMatchByCode} disabled={!joinCode.trim()} className="bg-purple-600 hover:bg-purple-700">
+              <Button onClick={joinMatchByCode} disabled={!joinCode.trim()} className="bg-purple-600 hover:bg-purple-700 text-white">
                 Join
               </Button>
             </div>
@@ -252,11 +252,11 @@ export default function FloorDuelPage() {
               <p className="text-3xl font-bold text-green-400 text-center tracking-wider">{inviteCode}</p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={copyInviteCode} className="flex-1 bg-cyan-600 hover:bg-cyan-700">
+              <Button onClick={copyInviteCode} className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white">
                 <Copy className="h-4 w-4 mr-2" />
                 Copy Code
               </Button>
-              <Button onClick={shareOnFarcaster} className="flex-1 bg-purple-600 hover:bg-purple-700">
+              <Button onClick={shareOnFarcaster} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white">
                 <Share2 className="h-4 w-4 mr-2" />
                 Share on Farcaster
               </Button>
@@ -280,7 +280,7 @@ export default function FloorDuelPage() {
                     <span className="text-cyan-400 font-mono text-sm">
                       {match.player1Wallet.slice(0, 6)}...{match.player1Wallet.slice(-4)}
                     </span>
-                    <Button onClick={() => joinMatch(match.matchId)} size="sm" className="bg-purple-600 hover:bg-purple-700">
+                    <Button onClick={() => joinMatch(match.matchId)} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
                       Join
                     </Button>
                   </div>
@@ -311,7 +311,7 @@ export default function FloorDuelPage() {
                     <div className="flex gap-2">
                       {match.status.tag === 'Waiting' && (
                         <>
-                          <Button onClick={() => router.push(`/pvp/play/${match.matchId}`)} size="sm" className="bg-cyan-600 hover:bg-cyan-700">
+                          <Button onClick={() => router.push(`/pvp/play/${match.matchId}`)} size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-white">
                             Open
                           </Button>
                           <Button onClick={() => cancelMatch(match.matchId)} variant="outline" size="sm">
@@ -320,7 +320,7 @@ export default function FloorDuelPage() {
                         </>
                       )}
                       {match.status.tag === 'Active' && (
-                        <Button onClick={() => router.push(`/pvp/play/${match.matchId}`)} className="bg-green-600 hover:bg-green-700">
+                        <Button onClick={() => router.push(`/pvp/play/${match.matchId}`)} className="bg-green-600 hover:bg-green-700 text-white">
                           Play
                         </Button>
                       )}

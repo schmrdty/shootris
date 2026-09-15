@@ -63,7 +63,7 @@ export function SkinUnlockPrompt() {
             <Button
               key={set}
               onClick={() => useSet(set)}
-              className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700"
+              className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700 text-white"
             >
               Use {SET_LABELS[set]}
             </Button>

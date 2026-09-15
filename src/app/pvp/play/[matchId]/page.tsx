@@ -596,7 +596,7 @@ export default function PvpPlayPage() {
             <Button onClick={() => router.push('/leaderboard')} variant="outline" className="w-full sm:w-auto">
               Leaderboard
             </Button>
-            <Button onClick={() => router.push('/pvp')} className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700">
+            <Button onClick={() => router.push('/pvp')} className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white">
               Back to PvP
             </Button>
           </DialogFooter>

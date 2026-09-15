@@ -114,7 +114,7 @@ export default function SettingsPage() {
                     <Button
                       size="sm"
                       onClick={() => applySkins(Object.fromEntries(PIECE_KEYS.map((k) => [k, p.set])))}
-                      className="bg-yellow-600 hover:bg-yellow-700 shrink-0"
+                      className="bg-yellow-600 hover:bg-yellow-700 text-white shrink-0"
                     >
                       Use
                     </Button>

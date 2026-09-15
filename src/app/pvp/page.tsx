@@ -57,7 +57,7 @@ export default function PvPPage() {
                 <p className="flex items-center gap-2"><Target className="h-4 w-4 text-cyan-400 shrink-0" aria-hidden="true" /> First to hit opponent's floor wins</p>
                 <p className="flex items-center gap-2"><Timer className="h-4 w-4 text-cyan-400 shrink-0" aria-hidden="true" /> Lose if you top out first</p>
               </div>
-              <Button className="w-full bg-cyan-600 hover:bg-cyan-700" style={{ boxShadow: '0 0 10px rgba(0, 240, 255, 0.5)' }}>
+              <Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" style={{ boxShadow: '0 0 10px rgba(0, 240, 255, 0.5)' }}>
                 Challenge →
               </Button>
             </CardContent>
@@ -84,7 +84,7 @@ export default function PvPPage() {
                 <p className="flex items-center gap-2"><ChartColumn className="h-4 w-4 text-yellow-400 shrink-0" aria-hidden="true" /> Clear lines for maximum points</p>
                 <p className="flex items-center gap-2"><Flame className="h-4 w-4 text-yellow-400 shrink-0" aria-hidden="true" /> Strategy meets speed</p>
               </div>
-              <Button className="w-full bg-yellow-600 hover:bg-yellow-700" style={{ boxShadow: '0 0 10px rgba(250, 204, 21, 0.5)' }}>
+              <Button className="w-full bg-yellow-600 hover:bg-yellow-700 text-white" style={{ boxShadow: '0 0 10px rgba(250, 204, 21, 0.5)' }}>
                 Race →
               </Button>
             </CardContent>
