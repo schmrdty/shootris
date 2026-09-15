@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useSyncExternalStore } from 'react';
 import { useSignMessage } from 'wagmi';
 import * as moduleBindings from '@/spacetime_module_bindings';
 
@@ -15,57 +15,107 @@ export interface SpacetimeDBState {
   connection: DbConnection | null;
 }
 
+const DB_HOST = 'wss://maincloud.spacetimedb.com';
+const DB_NAME = process.env.NEXT_PUBLIC_SPACETIME_MODULE_NAME || 'shootris-game';
 const BINDING_STORAGE_KEY = 'shootris_wallet_binding';
+// SpacetimeDB issues an identity token on first connect. Reusing it keeps the
+// same identity across page loads, so the wallet binding (and its one-time
+// signature) survives reloads, navigation and reconnects.
+const TOKEN_STORAGE_KEY = 'shootris_spacetimedb_token';
+const MAX_RETRY_DELAY_MS = 30_000;
 
 function bindingMemo(wallet: string, identityHex: string): string {
   return `${wallet.toLowerCase()}:${identityHex}`;
 }
 
-export function useSpacetimeDB(wallet: string | null) {
-  const [connected, setConnected] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('Initializing...');
-  const [player, setPlayer] = useState<Player | null>(null);
-  const [identityHex, setIdentityHex] = useState<string | null>(null);
-  const [bound, setBound] = useState(false);
-  const connectionRef = useRef<DbConnection | null>(null);
-  const bindInFlightRef = useRef(false);
-  const walletRef = useRef<string | null>(wallet);
-  const { signMessageAsync } = useSignMessage();
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
 
-  const registerPlayer = useCallback((walletAddr: string) => {
-    if (!connectionRef.current || !connected) return;
-    connectionRef.current.reducers.registerPlayer(walletAddr.toLowerCase());
-  }, [connected]);
+function writeStorage(key: string, value: string | null): void {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    // storage unavailable — this session still works, it just won't persist
+  }
+}
 
-  useEffect(() => {
-    if (connectionRef.current) {
-      return;
-    }
+// ── Shared connection ────────────────────────────────────────────────────
+// One socket per tab, shared by every page and component. It reconnects
+// with backoff after drops and immediately when the app returns to the
+// foreground (mobile webviews suspend sockets in the background).
 
-    const dbHost = 'wss://maincloud.spacetimedb.com';
-    const dbName = process.env.NEXT_PUBLIC_SPACETIME_MODULE_NAME || 'shootris-game';
+interface ConnectionSnapshot {
+  connection: DbConnection | null;
+  connected: boolean;
+  identityHex: string | null;
+  statusMessage: string;
+}
 
-    const onConnect = (connection: DbConnection, identity?: { toHexString?: () => string }) => {
-      console.log('SpacetimeDB Connected');
-      connectionRef.current = connection;
-      setConnected(true);
-      setStatusMessage('Connected to SpacetimeDB');
-      try {
-        const hex = identity?.toHexString?.();
-        if (hex) setIdentityHex(hex.replace(/^0x/, '').toLowerCase());
-      } catch {
-        // identity unavailable — binding flow will be skipped
-      }
+let snapshot: ConnectionSnapshot = {
+  connection: null,
+  connected: false,
+  identityHex: null,
+  statusMessage: 'Initializing...',
+};
+const serverSnapshot = snapshot;
+const listeners = new Set<() => void>();
+let started = false;
+let connecting = false;
+let retryCount = 0;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let tokenFailures = 0;
 
-      // Subscribe to all relevant tables
-      connection.subscriptionBuilder()
-        .onApplied(() => {
-          console.log('Subscriptions applied');
-        })
-        .onError((_errorCtx: moduleBindings.ErrorContext, error: Error) => {
+function update(patch: Partial<ConnectionSnapshot>) {
+  snapshot = { ...snapshot, ...patch };
+  listeners.forEach((l) => l());
+}
+
+function scheduleReconnect() {
+  if (retryTimer) return;
+  const delay = Math.min(MAX_RETRY_DELAY_MS, 1000 * 2 ** retryCount);
+  retryCount++;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    connect();
+  }, delay);
+}
+
+function reconnectNow() {
+  if (snapshot.connected || connecting) return;
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+  connect();
+}
+
+function connect() {
+  if (connecting || snapshot.connected) return;
+  connecting = true;
+  const savedToken = readStorage(TOKEN_STORAGE_KEY) ?? undefined;
+
+  moduleBindings.DbConnection.builder()
+    .withUri(DB_HOST)
+    .withModuleName(DB_NAME)
+    .withToken(savedToken)
+    .onConnect((connection, identity, token) => {
+      connecting = false;
+      retryCount = 0;
+      tokenFailures = 0;
+      if (token) writeStorage(TOKEN_STORAGE_KEY, token);
+
+      connection
+        .subscriptionBuilder()
+        .onError((ctx: moduleBindings.ErrorContext) => {
           // warn, not error: expected until the SpacetimeDB module is published
-          console.warn('SpacetimeDB subscription unavailable:', error.message);
-          setStatusMessage('Game server unavailable — stats and PvP are offline');
+          console.warn('SpacetimeDB subscription unavailable:', ctx.event);
+          update({ statusMessage: 'Game server unavailable — stats and PvP are offline' });
         })
         .subscribe([
           'SELECT * FROM players',
@@ -74,84 +124,145 @@ export function useSpacetimeDB(wallet: string | null) {
           'SELECT * FROM pvp_leaderboard',
           'SELECT * FROM pvp_matches',
           'SELECT * FROM payment_records',
-          'SELECT * FROM match_queue'
+          'SELECT * FROM match_queue',
         ]);
 
-      // Register table callbacks. Read the wallet from a ref: the player
-      // usually connects their wallet AFTER this socket opens, and a closure
-      // over the first render's wallet would never match.
-      const matchesWallet = (row: Player) =>
-        !!walletRef.current && row.wallet.toLowerCase() === walletRef.current.toLowerCase();
-      connection.db.players.onInsert((_ctx, newPlayer) => {
-        if (matchesWallet(newPlayer)) setPlayer(newPlayer);
-      });
-      connection.db.players.onUpdate((_ctx, _oldPlayer, newPlayer) => {
-        if (matchesWallet(newPlayer)) setPlayer(newPlayer);
-      });
-    };
+      let identityHex: string | null = null;
+      try {
+        identityHex = identity.toHexString().replace(/^0x/, '').toLowerCase();
+      } catch {
+        // identity unavailable — binding flow will be skipped
+      }
+      update({ connection, connected: true, identityHex, statusMessage: 'Connected to SpacetimeDB' });
+    })
+    .onConnectError((_ctx, error) => {
+      connecting = false;
+      console.warn('SpacetimeDB connection failed:', error?.message ?? error);
+      // A token the server keeps refusing is useless — start a fresh identity
+      if (savedToken && ++tokenFailures >= 3) {
+        writeStorage(TOKEN_STORAGE_KEY, null);
+        tokenFailures = 0;
+      }
+      update({ connected: false, connection: null, statusMessage: 'Reconnecting to game server…' });
+      scheduleReconnect();
+    })
+    .onDisconnect((_ctx, error) => {
+      connecting = false;
+      console.log('SpacetimeDB disconnected:', error?.message ?? 'connection closed');
+      update({ connected: false, connection: null, statusMessage: 'Reconnecting to game server…' });
+      scheduleReconnect();
+    })
+    .build();
+}
 
-    const onDisconnect = (_ctx: moduleBindings.ErrorContext, reason?: Error | null) => {
-      const reasonStr = reason ? reason.message : 'Connection closed';
-      console.log('Disconnected:', reasonStr);
-      setStatusMessage(`Disconnected: ${reasonStr}`);
-      connectionRef.current = null;
-      setConnected(false);
-    };
+function startConnection() {
+  if (started || typeof window === 'undefined') return;
+  started = true;
+  connect();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') reconnectNow();
+  });
+  window.addEventListener('online', reconnectNow);
+}
 
-    moduleBindings.DbConnection.builder()
-      .withUri(dbHost)
-      .withModuleName(dbName)
-      .onConnect(onConnect)
-      .onDisconnect(onDisconnect)
-      .build();
-  }, [wallet]);
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  startConnection();
+  return () => {
+    listeners.delete(listener);
+  };
+}
 
-  // Keep the player row in step with whichever wallet is connected now
+const getSnapshot = () => snapshot;
+const getServerSnapshot = () => serverSnapshot;
+
+// Shared across hook instances so several mounted components never prompt
+// for the same signature, or register the same player, twice.
+const bindInFlight = new Set<string>();
+const registeredOn = new WeakMap<DbConnection, Set<string>>();
+
+// ── Hook ─────────────────────────────────────────────────────────────────
+
+export function useSpacetimeDB(wallet: string | null) {
+  const { connection, connected, identityHex, statusMessage: sharedStatus } = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  );
+  const [player, setPlayer] = useState<Player | null>(null);
+  const [bindStatus, setBindStatus] = useState<string | null>(null);
+  const [bound, setBound] = useState(false);
+  const { signMessageAsync } = useSignMessage();
+
+  const registerPlayer = useCallback(
+    (walletAddr: string) => {
+      if (!connection || !connected) return;
+      connection.reducers.registerPlayer(walletAddr.toLowerCase());
+    },
+    [connection, connected]
+  );
+
+  // Track the connected wallet's player row on the current connection
   useEffect(() => {
-    walletRef.current = wallet;
-    const conn = connectionRef.current;
-    if (!connected || !conn || !wallet) {
+    if (!connection || !wallet) {
       setPlayer(null);
       return;
     }
     const w = wallet.toLowerCase();
     let found: Player | null = null;
-    for (const row of conn.db.players.iter()) {
+    for (const row of connection.db.players.iter()) {
       if (row.wallet.toLowerCase() === w) {
         found = row;
         break;
       }
     }
     setPlayer(found);
-  }, [wallet, connected]);
 
-  // Register player when wallet connects
+    const onInsert = (_ctx: moduleBindings.EventContext, row: Player) => {
+      if (row.wallet.toLowerCase() === w) setPlayer(row);
+    };
+    const onUpdate = (_ctx: moduleBindings.EventContext, _old: Player, row: Player) => {
+      if (row.wallet.toLowerCase() === w) setPlayer(row);
+    };
+    connection.db.players.onInsert(onInsert);
+    connection.db.players.onUpdate(onUpdate);
+    return () => {
+      connection.db.players.removeOnInsert(onInsert);
+      connection.db.players.removeOnUpdate(onUpdate);
+    };
+  }, [connection, wallet]);
+
+  // Register the player once per wallet per connection
   useEffect(() => {
-    if (connected && wallet && !player) {
-      registerPlayer(wallet);
+    if (!connection || !connected || !wallet || player) return;
+    const w = wallet.toLowerCase();
+    let seen = registeredOn.get(connection);
+    if (!seen) {
+      seen = new Set();
+      registeredOn.set(connection, seen);
     }
-  }, [connected, wallet, player, registerPlayer]);
+    if (seen.has(w)) return;
+    seen.add(w);
+    connection.reducers.registerPlayer(w);
+  }, [connection, connected, wallet, player]);
 
-  // Bind wallet <-> SpacetimeDB identity (one-time signature per device).
+  // Bind wallet <-> SpacetimeDB identity (one-time signature per identity).
   // The signature is verified server-side (/api/bind) and attested into the
   // module, which rejects score writes from unbound identities.
   useEffect(() => {
-    if (!connected || !wallet || !identityHex) return;
+    if (!connected || !wallet || !identityHex) {
+      setBound(false);
+      return;
+    }
     const w = wallet.toLowerCase();
     const memo = bindingMemo(w, identityHex);
-
-    let stored: string | null = null;
-    try {
-      stored = localStorage.getItem(BINDING_STORAGE_KEY);
-    } catch {
-      // storage unavailable — fall through and re-bind
-    }
-    if (stored === memo) {
+    if (readStorage(BINDING_STORAGE_KEY) === memo) {
       setBound(true);
       return;
     }
-    if (bindInFlightRef.current) return;
-    bindInFlightRef.current = true;
+    setBound(false);
+    if (bindInFlight.has(memo)) return;
+    bindInFlight.add(memo);
 
     (async () => {
       try {
@@ -163,22 +274,18 @@ export function useSpacetimeDB(wallet: string | null) {
           body: JSON.stringify({ wallet: w, identityHex, signature }),
         });
         if (res.ok) {
-          try {
-            localStorage.setItem(BINDING_STORAGE_KEY, memo);
-          } catch {
-            // memo only avoids a repeat popup; binding itself succeeded
-          }
+          writeStorage(BINDING_STORAGE_KEY, memo);
           setBound(true);
-          setStatusMessage('Wallet verified');
+          setBindStatus('Wallet verified');
         } else {
           console.warn('Wallet binding failed:', await res.text());
-          setStatusMessage('Wallet verification failed — scores will not be saved');
+          setBindStatus('Wallet verification failed — scores will not be saved');
         }
       } catch (error) {
         console.warn('Wallet binding skipped:', error);
-        setStatusMessage('Wallet verification declined — scores will not be saved');
+        setBindStatus('Wallet verification declined — scores will not be saved');
       } finally {
-        bindInFlightRef.current = false;
+        bindInFlight.delete(memo);
       }
     })();
   }, [connected, wallet, identityHex, signMessageAsync]);
@@ -186,10 +293,10 @@ export function useSpacetimeDB(wallet: string | null) {
   return {
     connected,
     wallet,
-    statusMessage,
+    statusMessage: bindStatus ?? sharedStatus,
     player,
     bound,
-    connection: connectionRef.current,
+    connection,
     registerPlayer,
   };
 }

@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link';
 import { useSpacetimeDB } from '@/lib/spacetime/hooks';
 import { useAddMiniApp } from "@/hooks/useAddMiniApp";
-import { useQuickAuth } from "@/hooks/useQuickAuth";
+import { useQuickAuth, profileLabel } from "@/hooks/useQuickAuth";
+import { PlayerName } from '@/components/PlayerName';
 import { useIsInFarcaster } from "@/hooks/useIsInFarcaster";
 import { WalletConnect } from '@/components/wallet-connect';
 import { ShareOnFarcaster } from '@/components/ShareOnFarcaster';
@@ -22,7 +23,7 @@ export default function Home() {
   const { connected: dbConnected, player } = useSpacetimeDB(address || null);
     const { addMiniApp } = useAddMiniApp();
     const isInFarcaster = useIsInFarcaster()
-    useQuickAuth(isInFarcaster)
+    const farcasterProfile = useQuickAuth(isInFarcaster)
     useEffect(() => {
       const tryAddMiniApp = async () => {
         try {
@@ -87,8 +88,14 @@ export default function Home() {
             {address ? (
               <div className="text-center space-y-2">
                 <p className="text-lg font-bold text-green-400">
-                  {address.slice(0, 6)}...{address.slice(-4)} 
-                  {farcasterUsername && <span className="ml-2 text-purple-400">@{farcasterUsername}</span>}
+                  {/* Farcaster handle when signed in there, otherwise Basename/ENS/address */}
+                  {farcasterProfile || farcasterUsername ? (
+                    <span className="text-purple-300">
+                      {farcasterProfile ? profileLabel(farcasterProfile) : `@${farcasterUsername}`}
+                    </span>
+                  ) : (
+                    <PlayerName wallet={address} />
+                  )}
                 </p>
                 <p className="text-base font-bold text-gray-300 flex items-center justify-center gap-2">
                   <span

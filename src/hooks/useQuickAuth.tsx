@@ -1,88 +1,84 @@
 import { sdk } from '@farcaster/miniapp-sdk'
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
-interface UserData {
+export interface QuickAuthProfile {
   fid: number
-  displayName: string
-  username: string
+  username?: string
+  displayName?: string
   pfpUrl?: string
   primaryAddress?: string
+  ensName?: string
 }
 
-export function useQuickAuth(isInFarcaster: boolean): void {
-  const hasAuthenticated = useRef(false)
+// Verified once per app session. Pages remount on navigation (Home →
+// Settings → Home), and that must not look like signing in again.
+const SESSION_KEY = 'shootris_quick_auth_profile'
+
+function readSession(): QuickAuthProfile | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    return raw ? (JSON.parse(raw) as QuickAuthProfile) : null
+  } catch {
+    return null
+  }
+}
+
+/** Best available public handle: @username, then ENS, then display name, then fid. */
+export function profileLabel(p: QuickAuthProfile): string {
+  if (p.username) return `@${p.username}`
+  if (p.ensName) return p.ensName
+  if (p.displayName) return p.displayName
+  return `FID ${p.fid}`
+}
+
+let inFlight: Promise<QuickAuthProfile | null> | null = null
+
+export function useQuickAuth(isInFarcaster: boolean): QuickAuthProfile | null {
+  const [profile, setProfile] = useState<QuickAuthProfile | null>(null)
 
   useEffect(() => {
-    const authenticateUser = async (): Promise<void> => {
-      try {
-        if (!isInFarcaster) return
-        
-        if (hasAuthenticated.current) return
-        hasAuthenticated.current = true
-        
-        const response: Response = await sdk.quickAuth.fetch('/api/me')
-        
-        if (response.ok) {
-          const userData: UserData = await response.json()
-          
-          toast.success('Quick Auth Successful!', {
-            description: (
-              <div className="flex flex-col gap-2 mt-2 text-black">
-                <div className="flex items-center gap-3">
-                  {userData.pfpUrl && (
-                    <img 
-                      src={userData.pfpUrl} 
-                      alt="Profile" 
-                      className="w-12 h-12 rounded-full border-2 border-black"
-                    />
-                  )}
-                  <div>
-                    <div className="font-semibold text-black">{userData.displayName}</div>
-                    <div className="text-sm text-black/70">@{userData.username}</div>
-                  </div>
-                </div>
-                <div className="text-sm space-y-1 text-black">
-                  <div><span className="font-medium">FID:</span> {userData.fid}</div>
-                  {userData.primaryAddress && (
-                    <div>
-                      <span className="font-medium">Address:</span>{' '}
-                      {userData.primaryAddress.slice(0, 6)}...{userData.primaryAddress.slice(-4)}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ),
-            duration: 3000,
-            className: 'border-2 border-black',
-            style: {
-              borderColor: '#000000',
-              borderWidth: '2px',
-            },
-          })
-        } else {
-          toast.error('Authentication failed', {
-            description: 'Unable to verify your Farcaster identity',
-            className: 'border-2 border-black text-black',
-            style: {
-              borderColor: '#000000',
-              borderWidth: '2px',
-            },
-          })
-        }
-      } catch (error) {
-        console.error('Quick Auth error:', error)
-        toast.error('Authentication error', {
-          description: error instanceof Error ? error.message : 'An unexpected error occurred',
-          className: 'border-2 border-black text-black',
-          style: {
-            borderColor: '#000000',
-            borderWidth: '2px',
-          },
-        })
-      }
+    if (!isInFarcaster) return
+    const cached = readSession()
+    if (cached) {
+      setProfile(cached)
+      return
     }
 
-    authenticateUser()
+    inFlight ??= (async () => {
+      try {
+        const response = await sdk.quickAuth.fetch('/api/me')
+        if (!response.ok) {
+          toast.error('Farcaster sign-in failed', { description: 'Unable to verify your Farcaster identity' })
+          return null
+        }
+        const data = (await response.json()) as QuickAuthProfile
+        try {
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(data))
+        } catch {
+          // no session storage — the next page load just verifies again
+        }
+        toast.success(`Signed in as ${profileLabel(data)}`, {
+          description: data.displayName && data.username ? data.displayName : undefined,
+          duration: 3000,
+        })
+        return data
+      } catch (error) {
+        console.error('Quick Auth error:', error)
+        return null
+      } finally {
+        inFlight = null
+      }
+    })()
+
+    let cancelled = false
+    inFlight.then((p) => {
+      if (!cancelled && p) setProfile(p)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [isInFarcaster])
+
+  return profile
 }
