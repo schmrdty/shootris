@@ -13,7 +13,8 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
 # pnpm's package store persists between builds, so a lockfile change only
 # downloads what actually changed
-RUN --mount=type=cache,id=shootris-pnpm-store,target=/root/.local/share/pnpm/store     pnpm install --frozen-lockfile --ignore-scripts
+RUN --mount=type=cache,id=shootris-pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts
 
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -24,7 +25,8 @@ ENV NEXT_TELEMETRY_DISABLED=1 BUILD_STANDALONE=1
 # Keep Next's webpack cache between builds. Without it every deploy compiles
 # the wallet libraries from scratch; with it, compile time roughly halves.
 # Reset with: sudo docker builder prune --filter id=shootris-next-cache
-RUN --mount=type=cache,id=shootris-next-cache,target=/app/.next/cache     pnpm build
+RUN --mount=type=cache,id=shootris-next-cache,target=/app/.next/cache \
+    pnpm build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
