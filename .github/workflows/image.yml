@@ -1,0 +1,77 @@
+# Builds the Shootris container on GitHub instead of on the server.
+# Every push to main publishes ghcr.io/<owner>/shootris:latest (and :<sha>);
+# the server only pulls the finished image and restarts — no build there.
+#
+# One-time setup: repo Settings → Secrets and variables → Actions →
+# New repository secret named NEXT_PUBLIC_ENV, containing the NEXT_PUBLIC_*
+# lines from the server's .env.local (one per line). Those values are baked
+# into the browser bundle at build time. Server-only secrets (attestor token,
+# Alchemy key) never go here — the container reads them from the server's
+# .env.local when it starts.
+name: Build image
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'infra/**'
+      - 'spacetime-server/**'
+      - 'art/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write build-time public env
+        env:
+          NEXT_PUBLIC_ENV: ${{ secrets.NEXT_PUBLIC_ENV }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_ENV" ]; then
+            echo "::error::Add the NEXT_PUBLIC_ENV repository secret (see top of this file)"
+            exit 1
+          fi
+          # Only NEXT_PUBLIC_* lines are kept, so a pasted server secret can
+          # never end up inside the image
+          printf '%s\n' "$NEXT_PUBLIC_ENV" | tr -d '\r' | grep -E '^NEXT_PUBLIC_[A-Z0-9_]+=' > .env.production || true
+          dropped=$(printf '%s\n' "$NEXT_PUBLIC_ENV" | tr -d '\r' | grep -vcE '^(NEXT_PUBLIC_[A-Z0-9_]+=|#|\s*$)' || true)
+          [ "$dropped" -gt 0 ] && echo "::warning::Ignored $dropped non-NEXT_PUBLIC line(s) in NEXT_PUBLIC_ENV"
+          echo "Public vars baked in: $(cut -d= -f1 .env.production | tr '\n' ' ')"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image name
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/shootris" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.name.outputs.image }}:latest
+            ${{ steps.name.outputs.image }}:${{ github.sha }}
+          # Lets the server confirm which commit it is running
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          # Reuse unchanged layers (dependencies) between runs
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

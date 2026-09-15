@@ -12,6 +12,18 @@ cat /etc/caddy/Caddyfile
 caddy validate --config /etc/caddy/Caddyfile
 ```
 
+## Deploying updates
+
+Pushes to `main` build the image on GitHub (`.github/workflows/image.yml`).
+When that run finishes, deploy on the server in seconds:
+
+```bash
+bash ~/shootris/infra/deploy.sh
+```
+
+Fallback if GitHub is unavailable — build on the server instead:
+`cd ~/shootris/infra && sudo docker compose -f docker-compose.cohost.yml up -d --build`
+
 ## 2. Run the game container, bound to localhost
 
 ```bash

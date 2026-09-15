@@ -7,6 +7,10 @@
 
 services:
   shootris:
+    # Normally pulled prebuilt from GitHub (.github/workflows/image.yml):
+    #   docker compose -f docker-compose.cohost.yml pull && ... up -d
+    # `up -d --build` still builds locally from the repo as a fallback.
+    image: ghcr.io/schmrdty/shootris:latest
     # Dockerfile already sets BUILD_STANDALONE=1 for the standalone output
     build:
       context: ..
