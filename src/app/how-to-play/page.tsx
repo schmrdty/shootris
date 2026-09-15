@@ -38,8 +38,18 @@ export default function HowToPlayPage() {
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li><kbd className="px-2 py-1 bg-gray-800 rounded">← →</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">A D</kbd>: Move piece left/right</li>
                 <li><kbd className="px-2 py-1 bg-gray-800 rounded">↓</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">S</kbd>: Rotate piece</li>
-                <li><kbd className="px-2 py-1 bg-gray-800 rounded">↑</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">W</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">Space</kbd>: Shoot the tetromino (instant launch to the top)</li>
+                <li><kbd className="px-2 py-1 bg-gray-800 rounded">↑</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">W</kbd>: Move the tetromino forward one space</li>
+                <li><kbd className="px-2 py-1 bg-gray-800 rounded">Space</kbd>: Shoot the tetromino (instant launch to the top)</li>
                 <li><kbd className="px-2 py-1 bg-gray-800 rounded">Shift</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">C</kbd>: Hold piece</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-white mb-2">Phone &amp; Tablet Controls:</h3>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li><span className="font-bold text-cyan-400">Joystick</span> (left): slide left/right to move, push up to move forward, flick down to rotate</li>
+                <li><span className="font-bold text-white">Crosshair</span> (right): shoot the tetromino</li>
+                <li><span className="font-bold text-purple-300">Rotate</span> and <span className="font-bold text-yellow-300">Hold</span> buttons sit beside it</li>
               </ul>
             </div>
 

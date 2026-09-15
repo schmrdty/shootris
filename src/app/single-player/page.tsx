@@ -18,6 +18,8 @@ import { base } from 'wagmi/chains';
 import { InGameMusicControls } from '@/components/InGameMusicControls';
 import { StageAmbience } from '@/components/StageAmbience';
 import { useMusicPreference } from '@/lib/music';
+import { MobileControls } from '@/components/MobileControls';
+import { useTouchControls, useBoardCellSize, CONTROL_DECK_HEIGHT } from '@/hooks/useTouchControls';
 import { Wallet, ConnectWallet } from '@coinbase/onchainkit/wallet';
 import { Swap, SwapAmountInput, SwapToggleButton, SwapButton, SwapMessage, SwapToast } from '@coinbase/onchainkit/swap';
 import { MYU_TOKEN, SWAP_FROM_TOKENS } from '@/app/config/onchainkit';
@@ -44,6 +46,9 @@ export default function SinglePlayerPage() {
     [connection, address]
   );
   const [musicOn, setMusicOn] = useMusicPreference(player?.musicOn, persistMusic);
+  // Phones and tablets: on-screen controls, board sized to fit above them
+  const touch = useTouchControls();
+  const cell = useBoardCellSize(touch, 220);
   // Deterministic first render (no random piece) so SSR and client match;
   // the mount effect spawns the real random state client-side.
   const [gameState, setGameState] = useState<GameState>(() => ({ ...createInitialGameState(), nextPiece: null }));
@@ -219,7 +224,7 @@ export default function SinglePlayerPage() {
         case 'w':
         case 'W':
           e.preventDefault();
-          setGameState(prev => hardLaunchUp(prev));
+          setGameState(prev => movePieceUp(prev)); // forward one space
           break;
         case 'ArrowDown':
         case 's':
@@ -335,9 +340,9 @@ export default function SinglePlayerPage() {
     }
 
     return board.slice().reverse().map((row, y) => (
-      <div key={y} className="flex" style={{ height: '24px' }}>
-        {row.map((cell, x) => (
-          <div key={x} className="relative" style={cellStyle(cell, 24)}>
+      <div key={y} className="flex" style={{ height: `${cell}px` }}>
+        {row.map((color, x) => (
+          <div key={x} className="relative" style={cellStyle(color, cell)}>
             {/* Thin grid line */}
             <div className="absolute inset-0 border border-cyan-900/20" />
           </div>
@@ -346,11 +351,34 @@ export default function SinglePlayerPage() {
     ));
   };
 
+  // Touch controls run the same engine actions as the keyboard
+  const touchAction = useCallback((action: (state: GameState) => GameState) => {
+    setGameState((prev) => (prev.gameOver ? prev : action(prev)));
+  }, []);
+
+  const renderMiniPiece = (piece: GameState['heldPiece'], size: number, dim = false) =>
+    piece ? (
+      <div className="inline-block" style={{ opacity: dim ? 0.4 : 1 }}>
+        {piece.shape.map((row, y) => (
+          <div key={y} className="flex" style={{ height: `${size}px` }}>
+            {row.map((c, x) => (
+              <div key={x} style={cellStyle(c ? piece.color : null, size)} />
+            ))}
+          </div>
+        ))}
+      </div>
+    ) : (
+      <span className="text-[10px] text-gray-600">empty</span>
+    );
+
   // Single-player is always available — no wallet required. Connecting a wallet
   // adds score persistence, leaderboards, and $MYU continues.
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-blue-950 px-4 py-8 pt-16">
+    <div
+      className={`min-h-screen bg-gradient-to-br from-gray-950 via-black to-blue-950 px-4 ${touch ? 'pt-14' : 'py-8 pt-16'}`}
+      style={touch ? { paddingBottom: CONTROL_DECK_HEIGHT + 8 } : undefined}
+    >
       {/* Per-stage backdrop + music (files load as they're produced) */}
       <StageAmbience stage={stage} isEarthen={isEarthen} muted={!musicOn} />
 
@@ -396,8 +424,8 @@ export default function SinglePlayerPage() {
         <div className="flex flex-col md:flex-row gap-6">
           {/* Game Board */}
           <div className="flex-1">
-            <Card className="bg-black/80 border-purple-500/50 p-4">
-              <div className="mb-4 flex justify-between items-center">
+            <Card className={`bg-black/80 border-purple-500/50 ${touch ? 'p-2' : 'p-4'}`}>
+              <div className={`${touch ? 'mb-2' : 'mb-4'} flex justify-between items-center`}>
                 <Button variant="outline" onClick={() => router.push('/')}>
                   ← Menu
                 </Button>
@@ -415,6 +443,34 @@ export default function SinglePlayerPage() {
                 <div className="w-20" />
               </div>
 
+              {/* Compact hold / stats / next strip — replaces the side panels on phones */}
+              {touch && (
+                <div className="mb-2 grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded border border-gray-800 bg-black/60 px-2 py-1">
+                  <div className="flex min-w-[52px] flex-col items-center">
+                    <span className="text-[9px] font-bold text-yellow-400">HOLD</span>
+                    {renderMiniPiece(gameState.heldPiece, 9, !gameState.canHold)}
+                  </div>
+                  <div className="grid grid-cols-3 text-center text-[11px] leading-tight">
+                    <div>
+                      <p className="text-gray-400">Score</p>
+                      <p className="font-bold text-white">{gameState.score}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Lines</p>
+                      <p className="font-bold text-white">{gameState.lines}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">S{stage} Lv</p>
+                      <p className="font-bold text-yellow-400">{getLevelInStage(gameState.level)}/{LEVELS_PER_STAGE}</p>
+                    </div>
+                  </div>
+                  <div className="flex min-w-[52px] flex-col items-center">
+                    <span className="text-[9px] font-bold text-green-400">NEXT</span>
+                    {renderMiniPiece(gameState.nextPiece, 9)}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-center">
                 <div className="inline-block relative border-4 border-cyan-500 rounded" style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.2)' }}>
                   {renderBoard()}
@@ -422,7 +478,7 @@ export default function SinglePlayerPage() {
                     <div
                       key={`clear-${lastClearEventRef.current}-${y}`}
                       className={isEarthen ? 'line-clear-earthen' : 'line-clear-neon'}
-                      style={{ top: `${(BOARD_HEIGHT - 1 - y) * 24}px`, height: '24px' }}
+                      style={{ top: `${(BOARD_HEIGHT - 1 - y) * cell}px`, height: `${cell}px` }}
                     />
                   ))}
                 </div>
@@ -431,7 +487,7 @@ export default function SinglePlayerPage() {
               {/* Controls hint */}
               <div className="mt-4 p-3 bg-gray-900/50 rounded border border-gray-700 hidden md:block">
                 <p className="text-xs text-gray-400 text-center">
-                  <span className="font-bold text-purple-400">Controls:</span> ← → or A/D: Move | ↓ or S: Rotate | ↑ or W / Space: Shoot | Shift/C: Hold
+                  <span className="font-bold text-purple-400">Controls:</span> ← → or A/D: Move | ↑ or W: Forward | ↓ or S: Rotate | Space: Shoot | Shift/C: Hold
                 </p>
               </div>
             </Card>
@@ -439,7 +495,7 @@ export default function SinglePlayerPage() {
 
           {/* Stats Panel */}
           <div className="md:w-64 space-y-4">
-            <Card className="bg-black/80 border-blue-500/50 p-4">
+            <Card className={`bg-black/80 border-blue-500/50 p-4 ${touch ? 'hidden' : ''}`}>
               <h3 className="text-lg font-bold text-blue-400 mb-3">Stats</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -486,7 +542,7 @@ export default function SinglePlayerPage() {
             )}
 
             {/* Hold Piece */}
-            <Card className="bg-black/80 border-yellow-500/50 p-4">
+            <Card className={`bg-black/80 border-yellow-500/50 p-4 ${touch ? 'hidden' : ''}`}>
               <h3 className="text-lg font-bold text-yellow-400 mb-3">Hold (Shift/C)</h3>
               <div className="flex justify-center items-center" style={{ minHeight: '96px' }}>
                 {gameState.heldPiece ? (
@@ -512,7 +568,7 @@ export default function SinglePlayerPage() {
             </Card>
 
             {/* Next Piece */}
-            <Card className="bg-black/80 border-green-500/50 p-4">
+            <Card className={`bg-black/80 border-green-500/50 p-4 ${touch ? 'hidden' : ''}`}>
               <h3 className="text-lg font-bold text-green-400 mb-3">Next Piece</h3>
               <div className="flex justify-center">
                 {gameState.nextPiece && (
@@ -537,6 +593,19 @@ export default function SinglePlayerPage() {
           </div>
         </div>
       </div>
+
+      {touch && mode !== null && (
+        <MobileControls
+          onLeft={() => touchAction(movePieceLeft)}
+          onRight={() => touchAction(movePieceRight)}
+          onForward={() => touchAction(movePieceUp)}
+          onShoot={() => touchAction(hardLaunchUp)}
+          onRotate={() => touchAction(rotatePieceAction)}
+          onHold={() => touchAction(holdPiece)}
+          canHold={gameState.canHold}
+          disabled={gameState.gameOver || showContinueModal}
+        />
+      )}
 
       {/* Stage clear banner */}
       {clearedStageBanner !== null && (

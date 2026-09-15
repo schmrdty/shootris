@@ -74,6 +74,9 @@ export default function MicroShootris({ onClose, matchFound }: MicroShootrisProp
         case 'ArrowUp':
         case 'w':
         case 'W':
+          e.preventDefault();
+          setGameState(prev => movePieceUp(prev)); // forward one space
+          break;
         case ' ':
           e.preventDefault();
           setGameState(prev => hardLaunchUp(prev));
@@ -163,7 +166,7 @@ export default function MicroShootris({ onClose, matchFound }: MicroShootrisProp
         </div>
 
         <div className="mt-4 text-xs text-gray-500 text-center">
-          <p>← →: Move | ↓: Rotate | ↑ / Space: Shoot</p>
+          <p>← →: Move | ↑: Forward | ↓: Rotate | Space: Shoot</p>
           <p className="text-yellow-400 mt-2">Searching for opponent...</p>
         </div>
       </div>
