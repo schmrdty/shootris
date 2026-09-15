@@ -192,6 +192,14 @@ export function useSpacetimeDB(wallet: string | null) {
   const [player, setPlayer] = useState<Player | null>(null);
   const [bindStatus, setBindStatus] = useState<string | null>(null);
   const [bound, setBound] = useState(false);
+  const [binding, setBinding] = useState(false);
+  const [bindAttempt, setBindAttempt] = useState(0);
+
+  /** Re-run wallet verification after a declined or failed signature. */
+  const retryBinding = useCallback(() => {
+    setBindStatus(null);
+    setBindAttempt((n) => n + 1);
+  }, []);
   const { signMessageAsync } = useSignMessage();
 
   const registerPlayer = useCallback(
@@ -263,6 +271,7 @@ export function useSpacetimeDB(wallet: string | null) {
     setBound(false);
     if (bindInFlight.has(memo)) return;
     bindInFlight.add(memo);
+    setBinding(true);
 
     (async () => {
       try {
@@ -286,9 +295,10 @@ export function useSpacetimeDB(wallet: string | null) {
         setBindStatus('Wallet verification declined — scores will not be saved');
       } finally {
         bindInFlight.delete(memo);
+        setBinding(false);
       }
     })();
-  }, [connected, wallet, identityHex, signMessageAsync]);
+  }, [connected, wallet, identityHex, signMessageAsync, bindAttempt]);
 
   return {
     connected,
@@ -296,6 +306,8 @@ export function useSpacetimeDB(wallet: string | null) {
     statusMessage: bindStatus ?? sharedStatus,
     player,
     bound,
+    binding,
+    retryBinding,
     connection,
     registerPlayer,
   };

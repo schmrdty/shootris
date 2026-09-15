@@ -17,7 +17,7 @@ import { PVP_ENTRY_FEE_MYU, MYU_DECIMALS } from '@/app/config/onchainkit';
 export default function FloorDuelPage() {
   const router = useRouter();
   const { address } = useAccount();
-  const { connection } = useSpacetimeDB(address || null);
+  const { connection, bound, retryBinding } = useSpacetimeDB(address || null);
   const [waitingMatches, setWaitingMatches] = useState<PvpMatch[]>([]);
   const [myMatches, setMyMatches] = useState<PvpMatch[]>([]);
   const [showInviteFlow, setShowInviteFlow] = useState(false);
@@ -44,6 +44,11 @@ export default function FloorDuelPage() {
 
   // Charge the $MYU entry fee (if configured) before running a matchmaking action
   const withEntryFee = useCallback(async (action: () => void) => {
+    if (!bound) {
+      alert('Verify your wallet first — the game server only accepts matches from a verified wallet.');
+      retryBinding();
+      return;
+    }
     if (feeRequired && !hasEnough) {
       setShowGetMyu(true);
       return;
@@ -55,7 +60,7 @@ export default function FloorDuelPage() {
       console.error('Entry fee payment failed:', error);
       alert('Entry fee payment failed. Please try again.');
     }
-  }, [feeRequired, hasEnough, payFee]);
+  }, [bound, retryBinding, feeRequired, hasEnough, payFee]);
 
   useEffect(() => {
     if (!connection) return;

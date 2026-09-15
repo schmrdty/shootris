@@ -38,7 +38,7 @@ export default function SinglePlayerPage() {
   const router = useRouter();
   const { address, chainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
-  const { connection, player } = useSpacetimeDB(address || null);
+  const { connection, player, bound, binding, retryBinding } = useSpacetimeDB(address || null);
   const persistMusic = useCallback(
     (on: boolean) => {
       if (connection && address) connection.reducers.setPlayerMusic(address.toLowerCase(), on);
@@ -107,38 +107,48 @@ export default function SinglePlayerPage() {
     prevStageRef.current = stage;
   }, [stage, mode]);
 
-  // Start a fresh run (server deactivates any previous active run for this wallet)
+  // Start a fresh run locally. The server-side run is created separately,
+  // once the wallet is verified (see below).
   const startNewRun = useCallback(() => {
     setGameState(spawnNewPiece(createInitialGameState()));
     setLastSnapshot(null);
     setShowContinueModal(false);
     setMintUnlocked(false);
+    setRunId(null);
     setRunNonce((n) => n + 1);
-    if (connection && address) {
-      const emptyBoard = JSON.stringify(Array(20).fill(Array(10).fill(null)));
-      connection.reducers.startSingleRun(address.toLowerCase(), emptyBoard, 1);
-    }
-  }, [connection, address]);
+  }, []);
 
-  // Initialize game once a mode is chosen, and track run IDs
+  // Initialize the game once a mode is chosen, and track run IDs
   useEffect(() => {
     if (mode === null) return;
-    if (connection && address) {
-      // Listen for new game runs for this wallet
-      const handleRunInsert = (_ctx: unknown, newRun: { runId: bigint; wallet: string }) => {
-        if (newRun.wallet.toLowerCase() === address.toLowerCase()) {
-          setRunId(newRun.runId);
-        }
-      };
-      connection.db.gameRuns.onInsert(handleRunInsert);
-      startNewRun();
-      return () => {
-        connection.db.gameRuns.removeOnInsert(handleRunInsert);
-      };
-    }
-    // No connection yet — still let the player play locally
     startNewRun();
-  }, [mode, connection, address, startNewRun]);
+  }, [mode, startNewRun]);
+
+  useEffect(() => {
+    if (!connection || !address) return;
+    const handleRunInsert = (_ctx: unknown, newRun: { runId: bigint; wallet: string }) => {
+      if (newRun.wallet.toLowerCase() === address.toLowerCase()) {
+        setRunId(newRun.runId);
+      }
+    };
+    connection.db.gameRuns.onInsert(handleRunInsert);
+    return () => {
+      connection.db.gameRuns.removeOnInsert(handleRunInsert);
+    };
+  }, [connection, address]);
+
+  // Create the run on the server. The module rejects writes from an
+  // unverified wallet, so this waits for the binding instead of firing the
+  // moment the socket connects — and still fires if verification (or the
+  // wallet itself) only arrives mid-game.
+  const startedForRunRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (mode === null || !connection || !address || !bound) return;
+    if (startedForRunRef.current === runNonce) return;
+    startedForRunRef.current = runNonce;
+    const emptyBoard = JSON.stringify(Array(20).fill(Array(10).fill(null)));
+    connection.reducers.startSingleRun(address.toLowerCase(), emptyBoard, 1);
+  }, [mode, connection, address, bound, runNonce]);
 
   // Journey level timer: fresh budget on each new level (or new run/continue)
   useEffect(() => {
@@ -371,6 +381,50 @@ export default function SinglePlayerPage() {
       <span className="text-[10px] text-gray-600">empty</span>
     );
 
+  // Whether this run will be recorded: the module only accepts writes from a
+  // verified wallet, so say plainly what is happening and offer a way back.
+  const SaveStatus = ({ compact = false }: { compact?: boolean }) => {
+    const wrap = compact
+      ? 'mt-1 flex items-center justify-center gap-2 text-[10px]'
+      : 'mt-3 border-t border-gray-700 pt-2 text-xs flex flex-col gap-2';
+    if (!address) {
+      return (
+        <div className={wrap}>
+          <span className="text-yellow-400/90">Guest — scores are not saved</span>
+          {!compact && (
+            <Wallet>
+              <ConnectWallet className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold px-3 py-2 rounded-lg" />
+            </Wallet>
+          )}
+        </div>
+      );
+    }
+    if (bound) {
+      return (
+        <div className={wrap}>
+          <span className={runId === null ? 'text-gray-400' : 'text-green-400'}>
+            {runId === null ? 'Starting run…' : 'Saving your score'}
+          </span>
+        </div>
+      );
+    }
+    if (binding) {
+      return (
+        <div className={wrap}>
+          <span className="text-cyan-300">Verifying wallet — sign the message to save scores</span>
+        </div>
+      );
+    }
+    return (
+      <div className={wrap}>
+        <span className="text-red-400">Wallet unverified — this run will not be saved</span>
+        <Button size="sm" variant="outline" onClick={retryBinding} className="border-cyan-500 text-cyan-300">
+          Verify wallet
+        </Button>
+      </div>
+    );
+  };
+
   // Single-player is always available — no wallet required. Connecting a wallet
   // adds score persistence, leaderboards, and $MYU continues.
 
@@ -470,6 +524,7 @@ export default function SinglePlayerPage() {
                   </div>
                 </div>
               )}
+              {touch && <SaveStatus compact />}
 
               <div className="flex justify-center">
                 <div className="inline-block relative border-4 border-cyan-500 rounded" style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.2)' }}>
@@ -515,11 +570,7 @@ export default function SinglePlayerPage() {
                   <span className="text-white font-bold">{getLevelInStage(gameState.level)} / {LEVELS_PER_STAGE}</span>
                 </div>
               </div>
-              {!address && (
-                <p className="text-xs text-yellow-400/80 mt-3 border-t border-gray-700 pt-2">
-                  Playing as guest — connect a wallet to save scores and use $MYU continues.
-                </p>
-              )}
+              <SaveStatus />
             </Card>
 
             {/* Journey milestone: stage cleared → NFT mint unlocked */}
