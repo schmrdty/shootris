@@ -127,7 +127,7 @@ function Joystick({
       ref={padRef}
       role="application"
       aria-label="Joystick: left or right to move, up to move forward, flick down to rotate"
-      className="relative h-36 w-36 shrink-0 rounded-2xl border-2 border-cyan-500/70 bg-gray-950 shadow-[inset_0_0_24px_rgba(0,240,255,0.18)] touch-none select-none"
+      className="relative h-[122px] w-[122px] shrink-0 rounded-2xl border-2 border-cyan-500/70 bg-gray-950 shadow-[inset_0_0_24px_rgba(0,240,255,0.18)] touch-none select-none"
       onPointerDown={(e) => {
         if (disabled) return;
         activePointer.current = e.pointerId;
@@ -150,9 +150,9 @@ function Joystick({
       <span className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 text-cyan-500/50">▲</span>
       <span className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-cyan-500/50">ROTATE</span>
       <div
-        className="pointer-events-none absolute left-1/2 top-1/2 h-14 w-14 rounded-xl border-2 border-cyan-300 bg-cyan-500/30"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-12 w-12 rounded-xl border-2 border-cyan-300 bg-cyan-500/30"
         style={{
-          transform: `translate(calc(-50% + ${knob.x * 36}px), calc(-50% + ${knob.y * 36}px))`,
+          transform: `translate(calc(-50% + ${knob.x * 30}px), calc(-50% + ${knob.y * 30}px))`,
           transition: knob.x === 0 && knob.y === 0 ? 'transform 120ms ease-out' : undefined,
         }}
       />
@@ -237,13 +237,13 @@ export function MobileControls({
       <div className="mx-auto flex h-full max-w-md items-center justify-between gap-3">
         <Joystick onLeft={onLeft} onRight={onRight} onForward={onForward} onRotate={onRotate} disabled={disabled} />
 
-        <div className="grid grid-cols-2 grid-rows-2 items-center justify-items-center gap-2">
+        <div className="grid -translate-x-[5px] -translate-y-[8px] grid-cols-2 grid-rows-2 items-center justify-items-center gap-2">
           <PadButton
             label="Hold or swap piece"
             onPress={onHold}
             disabled={disabled}
             dim={!canHold}
-            className="col-start-1 row-start-1 h-14 w-14 border-yellow-400 bg-yellow-500/15 text-yellow-300"
+            className="col-start-1 row-start-1 h-[63px] w-[63px] border-yellow-400 bg-yellow-500/15 text-yellow-300"
           >
             <span className="flex flex-col items-center text-[10px] font-bold leading-tight">
               <ArrowLeftRight className="h-5 w-5" aria-hidden="true" />
@@ -254,7 +254,7 @@ export function MobileControls({
             label="Rotate piece"
             onPress={onRotate}
             disabled={disabled}
-            className="col-start-1 row-start-2 h-14 w-14 border-purple-400 bg-purple-500/15 text-purple-200"
+            className="col-start-1 row-start-2 h-[63px] w-[63px] border-purple-400 bg-purple-500/15 text-purple-200"
           >
             <span className="flex flex-col items-center text-[10px] font-bold leading-tight">
               <RotateCw className="h-5 w-5" aria-hidden="true" />
@@ -265,9 +265,9 @@ export function MobileControls({
             label="Shoot piece"
             onPress={onShoot}
             disabled={disabled}
-            className="col-start-2 row-span-2 row-start-1 h-24 w-24 border-gray-300 bg-gradient-to-br from-gray-100 to-gray-300 text-gray-900 shadow-[0_4px_16px_rgba(255,255,255,0.15)]"
+            className="col-start-2 row-span-2 row-start-1 h-[82px] w-[82px] border-gray-300 bg-gradient-to-br from-gray-100 to-gray-300 text-gray-900 shadow-[0_4px_16px_rgba(255,255,255,0.15)]"
           >
-            <CrosshairIcon className="h-16 w-16" />
+            <CrosshairIcon className="h-[54px] w-[54px]" />
           </PadButton>
         </div>
       </div>
