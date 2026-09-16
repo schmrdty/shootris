@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { baseAccount, coinbaseWallet, injected, metaMask } from 'wagmi/connectors';
+import { baseAccount, coinbaseWallet, injected } from 'wagmi/connectors';
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { base, mainnet } from 'wagmi/chains';
 import { createPublicClient } from 'viem';
@@ -12,6 +12,8 @@ import { ONCHAINKIT_API_KEY, ONCHAINKIT_PROJECT_ID } from './config/onchainkit';
 import { GameThemeProvider } from '@/lib/theme';
 import { CollectionProvider } from '@/lib/collection';
 import { WalletReconnect } from '@/components/WalletReconnect';
+import { WalletDebug } from '@/components/WalletDebug';
+import { logWallet } from '@/lib/walletLog';
 
 // Connector order matters: OnchainKit's MiniKit auto-connects connectors[0]
 // when running inside a Farcaster/Base mini app, so the embedded wallet goes
@@ -25,7 +27,10 @@ const wagmiConfig = createConfig({
     farcasterMiniApp(),
     baseAccount({ appName: 'Shootris' }),
     coinbaseWallet({ appName: 'Shootris', preference: 'all' }),
-    metaMask({ dappMetadata: { name: 'Shootris' } }),
+    // MetaMask is deliberately absent: its SDK connector can hang forever
+    // inside a mini-app webview, which stalls wagmi's reconnect for
+    // everyone. injected() picks up the MetaMask extension through EIP-6963,
+    // and the OnchainKit wallet modal creates a MetaMask connector on demand.
     injected(),
   ],
   transports: {
@@ -45,6 +50,16 @@ const publicClients = {
   }),
 };
 
+// Record every wallet state change, so a drop can be diagnosed on the
+// device it happened on (any page with ?debug=1).
+if (typeof window !== 'undefined') {
+  wagmiConfig.subscribe(
+    (state) => ({ status: state.status, connector: state.current }),
+    ({ status, connector }) => logWallet(`status=${status}`, `connector=${connector ?? 'none'}`),
+    { equalityFn: (a, b) => a.status === b.status && a.connector === b.connector }
+  );
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -57,8 +72,7 @@ const queryClient = new QueryClient({
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    // reconnectOnMount off: WalletReconnect decides (see why there)
-    <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <OnchainKitProvider
           apiKey={ONCHAINKIT_API_KEY}
@@ -87,6 +101,7 @@ export function Providers({ children }: { children: ReactNode }) {
           }}
         >
           <WalletReconnect />
+          <WalletDebug />
           <CollectionProvider>
             <GameThemeProvider>{children}</GameThemeProvider>
           </CollectionProvider>

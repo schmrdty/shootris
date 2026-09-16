@@ -11,8 +11,16 @@ export function WalletConnect() {
     <div className="flex items-center justify-end gap-4">
       <Wallet>
         <ConnectWallet className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold px-3 py-2 text-sm sm:px-6 sm:py-3 sm:text-base rounded-lg shadow-lg hover:shadow-xl transition-all">
-          <Avatar className="h-6 w-6" />
-          <Name className="font-bold" />
+          {/* Only once connected: with no address these render nothing, and
+              the button looks like an empty pill. */}
+          {address ? (
+            <>
+              <Avatar className="h-6 w-6" />
+              <Name className="font-bold" />
+            </>
+          ) : (
+            <span>Connect Wallet</span>
+          )}
         </ConnectWallet>
         <WalletDropdown>
           <Identity
