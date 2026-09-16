@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useSpacetimeDB } from '@/lib/spacetime/hooks';
+import { MATCH_TIMEOUT_LABEL, formatCountdown, useTimeout } from '@/lib/pvp';
+import { shareCast } from '@/lib/share';
 import { MatchType, type PvpMatch } from '@/spacetime_module_bindings';
 import MicroShootris from '@/components/MicroShootris';
 import { Copy, Share2, Timer, Star, Flag, Skull, Target } from 'lucide-react';
@@ -22,6 +24,8 @@ export default function ScoreRacePage() {
   const [myMatches, setMyMatches] = useState<PvpMatch[]>([]);
   const [showInviteFlow, setShowInviteFlow] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
+  const [inviteCreatedAt, setInviteCreatedAt] = useState<number | null>(null);
+  const inviteLeftMs = useTimeout(inviteCreatedAt);
   const [joinCode, setJoinCode] = useState('');
   const [inQueue, setInQueue] = useState(false);
   const [matchFound, setMatchFound] = useState(false);
@@ -120,6 +124,7 @@ export default function ScoreRacePage() {
     withEntryFee(() => {
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
       setInviteCode(code);
+      setInviteCreatedAt(Date.now());
       setShowInviteFlow(true);
       connection.reducers.createPvpMatchWithCode(address.toLowerCase(), MatchType.ScoreRaceTimeTrial, code);
     });
@@ -152,9 +157,8 @@ export default function ScoreRacePage() {
   }, [inviteCode]);
 
   const shareOnFarcaster = useCallback(() => {
-    const text = `Join my Shootris Score Race match! Code: ${inviteCode}`;
-    const url = window.location.origin;
-    window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(url)}`, '_blank');
+    const text = `Join my Shootris Score Race match! Code: ${inviteCode} — the invite expires in ${MATCH_TIMEOUT_LABEL}, so jump in now.`;
+    shareCast(text);
   }, [inviteCode]);
 
   const joinMatch = useCallback((matchId: bigint) => {
@@ -254,6 +258,11 @@ export default function ScoreRacePage() {
             <p className="text-gray-300 mb-4">Share this code with your opponent:</p>
             <div className="bg-gray-900 p-4 rounded border border-green-500 mb-4">
               <p className="text-3xl font-bold text-green-400 text-center tracking-wider">{inviteCode}</p>
+              <p className={`mt-2 text-center text-sm font-bold ${inviteLeftMs === 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                {inviteLeftMs === 0
+                  ? 'Invite expired — create a new match'
+                  : `Expires in ${formatCountdown(inviteLeftMs ?? 0)}`}
+              </p>
             </div>
             <div className="flex gap-2">
               <Button onClick={copyInviteCode} className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white">

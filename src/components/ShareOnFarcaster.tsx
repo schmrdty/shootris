@@ -1,25 +1,13 @@
 'use client';
 
-import { sdk } from '@farcaster/miniapp-sdk';
 import { Button } from '@/components/ui/button';
-import { useIsInFarcaster } from '@/hooks/useIsInFarcaster';
-import { castShareUrl, DEFAULT_CAST_TEXT, SITE_URL } from '@/lib/share';
+import { DEFAULT_CAST_TEXT, shareCast } from '@/lib/share';
 import { Share2 } from 'lucide-react';
 
 export function ShareOnFarcaster({ text = DEFAULT_CAST_TEXT }: { text?: string }) {
-  const isInFarcaster = useIsInFarcaster();
 
-  const handleShare = async () => {
-    if (isInFarcaster) {
-      // Native composer inside Farcaster / the Base App
-      try {
-        await sdk.actions.composeCast({ text, embeds: [SITE_URL] });
-        return;
-      } catch {
-        // Older clients without composeCast fall through to the web composer
-      }
-    }
-    window.open(castShareUrl(text), '_blank', 'noopener');
+  const handleShare = () => {
+    void shareCast(text);
   };
 
   return (

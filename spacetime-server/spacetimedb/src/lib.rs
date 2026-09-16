@@ -1,5 +1,5 @@
 // SpacetimeDB imports must be at the top.
-use spacetimedb::{table, reducer, ReducerContext, Identity, Table, Timestamp, SpacetimeType};
+use spacetimedb::{table, reducer, ReducerContext, Identity, ScheduleAt, Table, TimeDuration, Timestamp, SpacetimeType};
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -27,6 +27,11 @@ pub enum MatchStatus {
 // =========================
 
 const TIME_TRIAL_DEFAULT_SECONDS: i64 = 180;
+
+// A match nobody joins, or one whose player walks away, must not sit open
+// forever: the invite expires and an abandoned match is decided.
+const MATCH_TIMEOUT_MICROS: i64 = 5 * 60 * 1_000_000;
+const SWEEP_INTERVAL_MICROS: i64 = 30 * 1_000_000;
 
 // PvE progression constants — must mirror src/lib/tetris/types.ts
 const LINES_PER_LEVEL_SRV: u32 = 10;
@@ -211,9 +216,31 @@ pub struct WalletBinding {
     bound_at: Timestamp,
 }
 
+// Last time each participant sent a board update. Kept out of PvpMatch so
+// the sweeper can tell WHICH player went quiet, not just that the row was
+// touched — and so this works as an additive schema change.
+#[table(name = pvp_activity, public, index(name = activity_by_match, btree(columns = [match_id])))]
+#[derive(Clone)]
+pub struct PvpActivity {
+    #[primary_key]
+    key: String, // "<match_id>:<wallet>"
+    match_id: u64,
+    wallet: String,
+    last_seen: Timestamp,
+}
+
+// Drives sweep_matches on a repeating schedule.
+#[table(name = match_sweeper_schedule, scheduled(sweep_matches))]
+pub struct MatchSweeperSchedule {
+    #[primary_key]
+    #[auto_inc]
+    scheduled_id: u64,
+    scheduled_at: ScheduleAt,
+}
+
 // =========================
 /**
- * Internal Helpers
+ * Helpers
  */
 // =========================
 
@@ -328,6 +355,58 @@ fn add_pvp_result(ctx: &ReducerContext, wallet: &str, match_type: &MatchType, wo
         row.updated_at = ctx.timestamp;
         ctx.db.pvp_leaderboard().wallet().update(row);
     }
+}
+
+fn activity_key(match_id: u64, wallet: &str) -> String {
+    format!("{}:{}", match_id, wallet)
+}
+
+fn touch_activity(ctx: &ReducerContext, match_id: u64, wallet: &str) {
+    let key = activity_key(match_id, wallet);
+    let row = PvpActivity {
+        key: key.clone(),
+        match_id,
+        wallet: wallet.to_string(),
+        last_seen: ctx.timestamp,
+    };
+    if ctx.db.pvp_activity().key().find(&key).is_some() {
+        ctx.db.pvp_activity().key().update(row);
+    } else {
+        ctx.db.pvp_activity().insert(row);
+    }
+}
+
+fn last_seen_micros(ctx: &ReducerContext, match_id: u64, wallet: &str, fallback: i64) -> i64 {
+    ctx.db
+        .pvp_activity()
+        .key()
+        .find(&activity_key(match_id, wallet))
+        .map(|a| a.last_seen.to_micros_since_unix_epoch())
+        .unwrap_or(fallback)
+}
+
+/// Record the result of a match: winner, per-mode stats, and player counters.
+fn finalize_match(ctx: &ReducerContext, mut m: PvpMatch, winner_wallet: String) {
+    let winner_is_p1 = m.player1_wallet == winner_wallet;
+    let winner_is_p2 = m.player2_wallet.as_ref().map(|w| w == &winner_wallet).unwrap_or(false);
+
+    increment_player_counters(ctx, &m.player1_wallet.clone(), true, winner_is_p1, winner_is_p1);
+    if let Some(p2) = m.player2_wallet.clone() {
+        increment_player_counters(ctx, &p2, true, winner_is_p2, winner_is_p2);
+    }
+    add_pvp_result(ctx, &m.player1_wallet.clone(), &m.match_type, winner_is_p1);
+    if let Some(p2) = m.player2_wallet.clone() {
+        add_pvp_result(ctx, &p2, &m.match_type, winner_is_p2);
+    }
+
+    m.status = MatchStatus::Completed;
+    m.winner_wallet = Some(winner_wallet);
+    m.completed_at = Some(ctx.timestamp);
+    if m.started_at.is_none() {
+        m.started_at = Some(ctx.timestamp);
+    }
+    m.updated_at = ctx.timestamp;
+    ctx.db.pvp_matches().match_id().update(m);
 }
 
 fn default_duration_for(match_type: &MatchType) -> i64 {
@@ -793,6 +872,7 @@ pub fn join_pvp_match_by_code(ctx: &ReducerContext, wallet: String, join_code: S
 #[reducer]
 pub fn update_pvp_board(ctx: &ReducerContext, match_id: u64, wallet: String, board_state: String, score: i128) -> Result<(), String> {
     require_bound(ctx, &wallet)?;
+    touch_activity(ctx, match_id, &wallet);
     if let Some(mut m) = ctx.db.pvp_matches().match_id().find(&match_id) {
         if m.status != MatchStatus::Active && m.status != MatchStatus::Waiting {
             return Err("Cannot update board for a completed or cancelled match".into());
@@ -833,7 +913,7 @@ pub fn update_pvp_board(ctx: &ReducerContext, match_id: u64, wallet: String, boa
 
 #[reducer]
 pub fn complete_pvp_match(ctx: &ReducerContext, match_id: u64, winner_wallet: String) -> Result<(), String> {
-    if let Some(mut m) = ctx.db.pvp_matches().match_id().find(&match_id) {
+    if let Some(m) = ctx.db.pvp_matches().match_id().find(&match_id) {
         if m.status == MatchStatus::Completed || m.status == MatchStatus::Cancelled {
             return Err("Match is already finalized".into());
         }
@@ -871,31 +951,7 @@ pub fn complete_pvp_match(ctx: &ReducerContext, match_id: u64, winner_wallet: St
             return Err("Winner must be a participant".into());
         }
 
-        // Determine participants
-        let p1 = m.player1_wallet.clone();
-        let p2_opt = m.player2_wallet.clone();
-
-        // Both participants played; only the winner gets the win
-        increment_player_counters(ctx, &p1, true, winner_is_p1, winner_is_p1);
-        if let Some(p2) = p2_opt.clone() {
-            increment_player_counters(ctx, &p2, true, winner_is_p2, winner_is_p2);
-        }
-
-        // Update PvP leaderboard stats per mode
-        add_pvp_result(ctx, &p1, &m.match_type, winner_is_p1);
-        if let Some(p2) = p2_opt {
-            add_pvp_result(ctx, &p2, &m.match_type, winner_is_p2);
-        }
-
-        m.status = MatchStatus::Completed;
-        m.winner_wallet = Some(winner_wallet);
-        m.completed_at = Some(ctx.timestamp);
-        if m.started_at.is_none() {
-            m.started_at = Some(ctx.timestamp);
-        }
-        m.updated_at = ctx.timestamp;
-        ctx.db.pvp_matches().match_id().update(m);
-
+        finalize_match(ctx, m, winner_wallet);
         Ok(())
     } else {
         Err("Match not found".into())
@@ -1051,6 +1107,95 @@ pub fn leave_match_queue(ctx: &ReducerContext, wallet: String) -> Result<(), Str
     for id in to_delete {
         ctx.db.match_queue().queue_id().delete(&id);
     }
+    Ok(())
+}
+
+// =========================
+// Reducers: Match timeouts
+// =========================
+
+/// Expire invites nobody joined, and decide matches somebody walked away
+/// from. Runs on a schedule; players never wait on another client.
+///
+/// - Waiting longer than five minutes -> Cancelled, no stats recorded.
+/// - Active, one player silent for five minutes -> the other player wins.
+/// - Active, both silent -> Cancelled, so neither is credited a win.
+#[reducer]
+pub fn sweep_matches(ctx: &ReducerContext, _schedule: MatchSweeperSchedule) -> Result<(), String> {
+    // Scheduled reducers are invoked by the database itself
+    if ctx.sender != ctx.identity() {
+        return Err("sweep_matches runs on a schedule".into());
+    }
+
+    let now = ctx.timestamp.to_micros_since_unix_epoch();
+    let stale: Vec<PvpMatch> = ctx.db.pvp_matches().iter().collect();
+
+    for m in stale {
+        match m.status {
+            MatchStatus::Waiting => {
+                if now - m.created_at.to_micros_since_unix_epoch() > MATCH_TIMEOUT_MICROS {
+                    let mut expired = m;
+                    expired.status = MatchStatus::Cancelled;
+                    expired.updated_at = ctx.timestamp;
+                    ctx.db.pvp_matches().match_id().update(expired);
+                }
+            }
+            MatchStatus::Active => {
+                let started = m
+                    .started_at
+                    .unwrap_or(m.created_at)
+                    .to_micros_since_unix_epoch();
+                let p1_seen = last_seen_micros(ctx, m.match_id, &m.player1_wallet, started);
+                let p1_gone = now - p1_seen > MATCH_TIMEOUT_MICROS;
+                let (p2_gone, p2_wallet) = match m.player2_wallet.clone() {
+                    Some(p2) => (now - last_seen_micros(ctx, m.match_id, &p2, started) > MATCH_TIMEOUT_MICROS, Some(p2)),
+                    None => (true, None),
+                };
+
+                if p1_gone && p2_gone {
+                    let mut abandoned = m;
+                    abandoned.status = MatchStatus::Cancelled;
+                    abandoned.updated_at = ctx.timestamp;
+                    ctx.db.pvp_matches().match_id().update(abandoned);
+                } else if p1_gone {
+                    if let Some(p2) = p2_wallet {
+                        finalize_match(ctx, m, p2);
+                    }
+                } else if p2_gone {
+                    let winner = m.player1_wallet.clone();
+                    finalize_match(ctx, m, winner);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+fn schedule_sweeper(ctx: &ReducerContext) {
+    if ctx.db.match_sweeper_schedule().iter().next().is_some() {
+        return;
+    }
+    ctx.db.match_sweeper_schedule().insert(MatchSweeperSchedule {
+        scheduled_id: 0,
+        scheduled_at: ScheduleAt::Interval(TimeDuration::from_micros(SWEEP_INTERVAL_MICROS)),
+    });
+}
+
+/// Runs on a fresh database only, so existing ones need ensure_sweeper.
+#[reducer(init)]
+pub fn init(ctx: &ReducerContext) {
+    schedule_sweeper(ctx);
+}
+
+/// Owner-only: start the sweeper on a database published before it existed.
+#[reducer]
+pub fn ensure_sweeper(ctx: &ReducerContext) -> Result<(), String> {
+    if ctx.sender != owner_identity() {
+        return Err("Only the database owner may schedule the sweeper".into());
+    }
+    schedule_sweeper(ctx);
     Ok(())
 }
 

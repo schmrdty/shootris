@@ -22,6 +22,7 @@ import { BOARD_WIDTH, BOARD_HEIGHT, OBSTACLE_BAND_HEIGHT } from '@/lib/tetris/ty
 import type { PvpMatch } from '@/spacetime_module_bindings';
 import { Trophy, Skull } from 'lucide-react';
 import { useGameTheme } from '@/lib/theme';
+import { MATCH_TIMEOUT_MS, formatCountdown, useTimeout } from '@/lib/pvp';
 import { MobileControls } from '@/components/MobileControls';
 import { useTouchControls, useBoardCellSize, CONTROL_DECK_HEIGHT } from '@/hooks/useTouchControls';
 
@@ -146,7 +147,21 @@ export default function PvpPlayPage() {
     () => parseOpponentBoard(match ? (isP1 ? match.player2BoardState : match.player1BoardState) : ''),
     [match, isP1]
   );
+  const opponentFingerprint = `${opponentScore}|${opponentInfo.lines}|${opponentInfo.gameOver}|${
+    opponentInfo.board ? opponentInfo.board.flat().filter(Boolean).length : -1
+  }`;
+  const [opponentSeenAt, setOpponentSeenAt] = useState<number | null>(null);
+  useEffect(() => {
+    setOpponentSeenAt(Date.now());
+  }, [opponentFingerprint]);
+  const opponentIdleLeftMs = useTimeout(opponentSeenAt);
+
   const isFloorDuel = match?.matchType.tag === 'FloorHitDuel';
+  const waitingSinceMs =
+    match && match.status.tag === 'Waiting'
+      ? Number(match.createdAt.microsSinceUnixEpoch / BigInt(1000))
+      : null;
+  const inviteLeftMs = useTimeout(waitingSinceMs);
   const matchCompleted = match?.status.tag === 'Completed';
   const matchCancelled = match?.status.tag === 'Cancelled';
 
@@ -394,7 +409,12 @@ export default function PvpPlayPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-950 via-black to-blue-950 pt-16">
         <Card className="p-8 bg-black/80 border-yellow-500 text-center">
           <p className="text-yellow-400 text-xl font-bold mb-2">Waiting for an opponent…</p>
-          <p className="text-gray-400 text-sm mb-4">The game starts automatically when someone joins.</p>
+          <p className="text-gray-400 text-sm mb-1">The game starts automatically when someone joins.</p>
+          <p className={`mb-4 text-sm font-bold ${inviteLeftMs === 0 ? 'text-red-400' : 'text-cyan-300'}`}>
+            {inviteLeftMs === 0
+              ? 'Invite expired — the match was cancelled'
+              : `Invite expires in ${formatCountdown(inviteLeftMs ?? MATCH_TIMEOUT_MS)}`}
+          </p>
           <Button onClick={() => router.push('/pvp')} variant="outline">
             Back to PvP
           </Button>
@@ -485,6 +505,13 @@ export default function PvpPlayPage() {
                   </div>
                 )}
               </div>
+              {!matchCompleted &&
+                opponentIdleLeftMs !== null &&
+                opponentIdleLeftMs < MATCH_TIMEOUT_MS - 60_000 && (
+                  <p className="mt-3 text-center text-sm font-bold text-yellow-400">
+                    Opponent idle — you win in {formatCountdown(opponentIdleLeftMs)} if they stay away
+                  </p>
+                )}
               {gameState.gameOver && !matchCompleted && (
                 <p className="text-center text-red-400 font-bold mt-3">
                   {isFloorDuel ? 'Topped out!' : 'Topped out — your score stands until time runs out.'}

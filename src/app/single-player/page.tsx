@@ -20,7 +20,7 @@ import { StageAmbience } from '@/components/StageAmbience';
 import { useMusicPreference } from '@/lib/music';
 import { MobileControls } from '@/components/MobileControls';
 import { useTouchControls, useBoardCellSize, CONTROL_DECK_HEIGHT } from '@/hooks/useTouchControls';
-import { Wallet, ConnectWallet } from '@coinbase/onchainkit/wallet';
+import { ConnectWalletButton } from '@/components/ConnectWalletButton';
 import { Swap, SwapAmountInput, SwapToggleButton, SwapButton, SwapMessage, SwapToast } from '@coinbase/onchainkit/swap';
 import { MYU_TOKEN, SWAP_FROM_TOKENS } from '@/app/config/onchainkit';
 import { Infinity as InfinityIcon, Map as MapIcon, Award } from 'lucide-react';
@@ -391,11 +391,9 @@ export default function SinglePlayerPage() {
       return (
         <div className={wrap}>
           <span className="text-yellow-400">Guest — scores are not saved</span>
-          <Wallet>
-            <ConnectWallet
-              className={`bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-lg ${compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-2'}`}
-            />
-          </Wallet>
+          <ConnectWalletButton
+            className={`rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 font-bold text-white ${compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-2'}`}
+          />
         </div>
       );
     }
@@ -694,9 +692,7 @@ export default function SinglePlayerPage() {
                   Connect a wallet to use <span className="text-green-400 font-bold">$MYU</span> continues and save your scores.
                 </p>
                 <div className="flex justify-center">
-                  <Wallet>
-                    <ConnectWallet className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold px-6 py-3 rounded-lg" />
-                  </Wallet>
+                  <ConnectWalletButton className="rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 px-6 py-3 font-bold text-white hover:from-purple-500 hover:to-cyan-500" />
                 </div>
               </div>
             )}
