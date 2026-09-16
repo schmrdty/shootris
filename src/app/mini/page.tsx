@@ -17,14 +17,14 @@ import { MobileControls, CrosshairIcon } from '@/components/MobileControls';
 import { CONTROL_DECK_HEIGHT } from '@/hooks/useTouchControls';
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
-// Shootris as an embeddable mini-game.
+// Embeddable build of Shootris, served at /mini.
 //
-// Runs inside a sandboxed iframe in a host app (D3MYUR), so it is
-// deliberately self-contained: no wallet, no SpacetimeDB, no account, no
-// network calls of any kind. The host owns identity, persistence and
-// tournaments; this only reports scores by postMessage.
+// Runs inside a sandboxed iframe in another application, so it is
+// deliberately self-contained: no wallet, no SpacetimeDB, no account and no
+// network calls. The embedding page owns identity and persistence; this
+// build only reports what happened, by postMessage.
 //
-// Contract with the host:
+// Message API (full details in docs/mini-embed.md):
 //   out: {type:'shootris:start'}
 //        {type:'shootris:score', score, durationMs}   on game over
 //   in:  {type:'host:pause'}   pause at once
@@ -51,8 +51,8 @@ function writeBest(score: number): void {
   }
 }
 
-/** Fire-and-forget: never block on a host that may not be listening. */
-function tellHost(message: Record<string, unknown>): void {
+/** Fire-and-forget: never block on a parent that may not be listening. */
+function report(message: Record<string, unknown>): void {
   try {
     if (typeof window !== 'undefined' && window.parent !== window) {
       window.parent.postMessage(message, '*');
@@ -82,8 +82,8 @@ export default function MiniShootris() {
     }
   }, []);
 
-  // Fit the board to the frame: the host may be only ~360px wide, and the
-  // control deck owns the bottom of the screen.
+  // Fit the board to the frame: the container may be only ~360px wide, and
+  // the control deck owns the bottom of the screen.
   useEffect(() => {
     const fit = () => {
       const byWidth = Math.floor((window.innerWidth - 24) / BOARD_WIDTH);
@@ -124,7 +124,7 @@ export default function MiniShootris() {
     startedAt.current = Date.now();
     reportedFor.current = 0;
     setPhase('playing');
-    tellHost({ type: 'shootris:start' });
+    report({ type: 'shootris:start' });
   }, []);
 
   const act = useCallback(
@@ -160,7 +160,7 @@ export default function MiniShootris() {
     setPhase('over');
     if (reportedFor.current !== startedAt.current) {
       reportedFor.current = startedAt.current;
-      tellHost({
+      report({
         type: 'shootris:score',
         score: Math.round(gameState.score),
         durationMs: Math.max(0, Date.now() - startedAt.current),
@@ -173,14 +173,14 @@ export default function MiniShootris() {
     blip(160);
   }, [gameState.gameOver, gameState.score, phase, best, blip]);
 
-  // Pause on background/blur, and on the host's instruction. The host hides
-  // its tab with display:none, which fires neither of the first two.
+  // Pause on background/blur, and when the embedding page says so: hiding
+  // a container with display:none fires neither of the first two.
   useEffect(() => {
     const pause = () => setPhase((p) => (p === 'playing' ? 'paused' : p));
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') pause();
     };
-    const onHostMessage = (e: MessageEvent) => {
+    const onParentMessage = (e: MessageEvent) => {
       const type = (e.data as { type?: string } | null)?.type;
       if (type === 'host:pause') pause();
       // Resume returns to the pause screen; the player decides when to play
@@ -188,11 +188,11 @@ export default function MiniShootris() {
     };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('blur', pause);
-    window.addEventListener('message', onHostMessage);
+    window.addEventListener('message', onParentMessage);
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('blur', pause);
-      window.removeEventListener('message', onHostMessage);
+      window.removeEventListener('message', onParentMessage);
     };
   }, []);
 

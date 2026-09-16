@@ -1,10 +1,18 @@
-# Shootris as an embedded mini-game
+# Embedded build (`/mini`)
 
-Route: **`/mini`** → `https://shootris.schmidtiest.xyz/mini`
+`/mini` is a self-contained build of Shootris for embedding in another web
+application: a single game mode, short sessions, no account and no wallet.
+It makes no network requests and stores nothing that identifies a player.
+The embedding application owns identity, persistence and any scoring or
+competition features built on top of the results it receives.
 
-A self-contained build for hosts like D3MYUR: one mode, short sessions, no
-account, no wallet, no network calls. The host owns identity, persistence and
-anything tournament-shaped; the game only reports what happened.
+## Route
+
+```
+https://<host>/mini          e.g. https://shootris.schmidtiest.xyz/mini
+```
+
+## Embedding
 
 ```html
 <iframe
@@ -15,62 +23,68 @@ anything tournament-shaped; the game only reports what happened.
 ></iframe>
 ```
 
-## Messages out (to the host)
+`allow-modals` is not required: the build never calls `alert`, `confirm` or
+`prompt`. Start, pause and game-over states are rendered in the page.
 
-Sent with `window.parent.postMessage(msg, '*')`, fire-and-forget — the game
-never waits for a listener, and never includes any user or device identifier.
+## Message API
 
-| Message | When |
+### Sent by the game
+
+Delivered with `window.parent.postMessage(message, '*')`. Delivery is
+fire-and-forget: the game never waits for a listener and never includes a
+user, wallet or device identifier.
+
+| Message | Sent when |
 | --- | --- |
 | `{ type: 'shootris:start' }` | a run begins |
 | `{ type: 'shootris:score', score: <int>, durationMs: <int> }` | game over, once per run |
 
-## Messages in (from the host)
+### Accepted by the game
 
-The host hides its tab with `display:none`, which fires neither
-`visibilitychange` nor `blur` inside the iframe, so pausing must be told.
+An embedding page that hides its container with `display:none` triggers
+neither `visibilitychange` nor `blur` inside the frame, so pausing in that
+case must be signalled explicitly.
 
 | Message | Effect |
 | --- | --- |
 | `{ type: 'host:pause' }` | pause immediately |
-| `{ type: 'host:resume' }` | show the pause screen — the player chooses when to play |
+| `{ type: 'host:resume' }` | display the pause screen; play resumes only on player input |
 
-The game also pauses on its own on `visibilitychange` and `blur`.
+The game also pauses on its own `visibilitychange` and `blur` events.
 
-## What it does and doesn't do
+## Behaviour
 
-- **Controls:** touch deck (joystick: move, push up for forward, flick down
-  to rotate; buttons: hold, rotate, crosshair shoot) plus pause, restart and
-  mute in the top bar — every target at least 44px. Keyboard on desktop:
-  ←/→ or A/D move, ↑/W forward, ↓/S rotate, Space shoot, C or Shift hold,
-  P or Esc pause. Mouse works on every button.
-- **No modals:** the sandbox omits `allow-modals`, so start, pause and game
-  over are in-page panels. No `alert`/`confirm`/`prompt`.
-- **No network:** no SpacetimeDB, no wallet, no analytics, no fetches.
-- **Storage:** an anonymous local best score in `localStorage`, wrapped in
-  try/catch. The game runs correctly when storage is partitioned or blocked.
-- **Audio:** muted by default; short tones only after the player unmutes.
-- **Gestures:** touch handling is confined to the control deck, so swipes
-  over the rest of the page still reach the host app.
-- **Viewport:** fits 300–400px wide with no horizontal scroll.
+| Area | Detail |
+| --- | --- |
+| Controls (touch) | Joystick: move left/right, push up to advance one space, flick down to rotate. Buttons: hold/swap, rotate, shoot. Pause, restart and mute in the top bar. All targets at least 44px. |
+| Controls (keyboard) | `←`/`→` or `A`/`D` move, `↑`/`W` advance, `↓`/`S` rotate, `Space` shoot, `C` or `Shift` hold, `P` or `Esc` pause. |
+| Controls (mouse) | Every on-screen control is clickable. |
+| Viewport | Designed for 300–400px wide containers; no horizontal scroll. |
+| Network | None. No database, wallet, analytics or asset fetches beyond the page itself. |
+| Storage | An anonymous best score in `localStorage`, written inside `try`/`catch`. The game runs normally when storage is blocked or partitioned. |
+| Audio | Muted until the player unmutes. Short synthesised tones only. |
+| Gestures | Touch handling is confined to the control deck, so gestures elsewhere reach the embedding page. |
 
-## Framing policy
+## Configuration
 
-`/mini` sends `Content-Security-Policy: frame-ancestors` allowing
-`d3myur.schmidtiest.xyz` (and other `*.schmidtiest.xyz` hosts) and no
-`X-Frame-Options`. Every other route sends `X-Frame-Options: SAMEORIGIN`.
+Framing is controlled by response headers. `/mini` sends a
+`Content-Security-Policy: frame-ancestors` list and no `X-Frame-Options`;
+all other routes send `X-Frame-Options: SAMEORIGIN`.
 
-To allow another host, set `MINI_FRAME_ANCESTORS` in the server's
-`.env.local` to a full CSP source list, then rebuild:
+The permitted origins default to the project's own domains. To allow
+others, set `MINI_FRAME_ANCESTORS` to a CSP source list before building:
 
 ```
-MINI_FRAME_ANCESTORS='self' https://d3myur.schmidtiest.xyz https://example.com
+MINI_FRAME_ANCESTORS='self' https://example.com https://app.example.com
 ```
 
-## Known wrinkle
+## Implementation notes
 
-`/mini` skips the wallet and onchain providers, but it still downloads the
-app's shared client bundle, and the Farcaster mini-app SDK inside it posts
-two `eip6963RequestProvider` handshake messages to the parent frame on load.
-They carry no identity and can be ignored. Removing them entirely means
-giving `/mini` its own root layout (a route-group split of `src/app`).
+- `/mini` does not mount the wallet or onchain providers used elsewhere in
+  the application, but it is served from the same client bundle. One
+  dependency in that bundle (the Farcaster mini-app SDK) posts two
+  `eip6963RequestProvider` handshake messages to the parent frame on load.
+  They contain no identifying data and can be ignored. Eliminating them
+  would require giving `/mini` its own root layout.
+- Source: `src/app/mini/page.tsx`; shared controls in
+  `src/components/MobileControls.tsx`.

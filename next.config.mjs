@@ -9,8 +9,8 @@ const nextConfig = {
     // spacetimedb's dev export points at raw .ts sources; transpile it
     transpilePackages: ['spacetimedb'],
     async headers() {
-        // The mini-game is meant to be embedded by the D3MYUR host app; every
-        // other route stays frame-deniable.
+        // Only the embeddable build may be framed, by the origins listed
+        // here or in MINI_FRAME_ANCESTORS; see docs/mini-embed.md.
         const miniHosts = (process.env.MINI_FRAME_ANCESTORS ||
             "'self' https://d3myur.schmidtiest.xyz https://*.schmidtiest.xyz http://localhost:3000 http://localhost:3100");
         return [
