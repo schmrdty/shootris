@@ -8,6 +8,20 @@ const nextConfig = {
     },
     // spacetimedb's dev export points at raw .ts sources; transpile it
     transpilePackages: ['spacetimedb'],
+    async headers() {
+        // The mini-game is meant to be embedded by the D3MYUR host app; every
+        // other route stays frame-deniable.
+        const miniHosts = (process.env.MINI_FRAME_ANCESTORS ||
+            "'self' https://d3myur.schmidtiest.xyz https://*.schmidtiest.xyz http://localhost:3000 http://localhost:3100");
+        return [
+            {
+                source: '/mini',
+                headers: [
+                    { key: 'Content-Security-Policy', value: `frame-ancestors ${miniHosts};` },
+                ],
+            },
+        ];
+    },
     images: {
         remotePatterns: [
             {

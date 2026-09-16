@@ -390,7 +390,7 @@ export default function SinglePlayerPage() {
     if (!address) {
       return (
         <div className={wrap}>
-          <span className="text-yellow-400/90">Guest — scores are not saved</span>
+          <span className="text-yellow-400">Guest — scores are not saved</span>
           <Wallet>
             <ConnectWallet
               className={`bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-lg ${compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-2'}`}

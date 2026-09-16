@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { sdk } from '@farcaster/miniapp-sdk';
 import { RotateCw, ArrowLeftRight } from 'lucide-react';
 import { CONTROL_DECK_HEIGHT } from '@/hooks/useTouchControls';
 
@@ -19,6 +18,8 @@ interface MobileControlsProps extends MobileControlActions {
   disabled?: boolean;
   /** Dim the hold button when the piece can't be swapped right now. */
   canHold?: boolean;
+  /** Off for the embedded build, which must not talk to a mini-app host. */
+  haptics?: boolean;
 }
 
 // Held directions repeat like keyboard auto-repeat: one step at once, a
@@ -30,14 +31,18 @@ const FLICK = 0.62; // how far down counts as a rotate flick
 
 type StickDirection = 'left' | 'right' | 'forward' | null;
 
+// Host haptics are opt-in and loaded lazily: importing the mini-app SDK
+// starts its own postMessage channel to the parent frame, which the
+// embeddable build (app/mini) must not do.
+let hostHaptics = true;
+
 function tick() {
-  // Haptic tick via the mini-app host (Farcaster / Base App); the Vibration
-  // API covers Android browsers. Either is skipped where unsupported.
-  try {
-    void sdk.haptics.impactOccurred('light').catch(() => undefined);
-  } catch {
-    // not running inside a mini app
+  if (hostHaptics) {
+    import('@farcaster/miniapp-sdk')
+      .then(({ sdk }) => sdk.haptics.impactOccurred('light'))
+      .catch(() => undefined);
   }
+  // Vibration API covers Android browsers; skipped where unsupported
   if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(8);
 }
 
@@ -221,7 +226,9 @@ export function MobileControls({
   onHold,
   disabled,
   canHold = true,
+  haptics = true,
 }: MobileControlsProps) {
+  hostHaptics = haptics;
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-30 border-t border-cyan-500/30 bg-black/90 px-4 pt-3 backdrop-blur"

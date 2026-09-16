@@ -10,6 +10,12 @@ export default function middleware(request: NextRequest) {
   const requestId = crypto.randomUUID();
   const response = NextResponse.next();
   response.headers.set("x-request-id", requestId);
+  // Everything except the embeddable mini-game refuses to be framed. /mini
+  // sets its own frame-ancestors policy in next.config.mjs, and must not
+  // carry X-Frame-Options, which has no cross-origin allow-list.
+  if (!request.nextUrl.pathname.startsWith("/mini")) {
+    response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  }
   return response;
 }
 

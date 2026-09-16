@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { WagmiProvider, createConfig, http } from 'wagmi';
@@ -71,6 +72,11 @@ const queryClient = new QueryClient({
 });
 
 export function Providers({ children }: { children: ReactNode }) {
+  // The embeddable mini-game is network-free and wallet-free by design, so
+  // it skips the wallet/onchain providers entirely (see app/mini/page.tsx).
+  const pathname = usePathname();
+  if (pathname?.startsWith('/mini')) return <>{children}</>;
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
