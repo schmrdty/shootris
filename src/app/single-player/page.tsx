@@ -21,6 +21,7 @@ import { useMusicPreference } from '@/lib/music';
 import { MobileControls } from '@/components/MobileControls';
 import { useTouchControls, useBoardCellSize, CONTROL_DECK_HEIGHT } from '@/hooks/useTouchControls';
 import { ConnectWalletButton } from '@/components/ConnectWalletButton';
+import { RunSaveStatus } from '@/components/RunSaveStatus';
 import { Swap, SwapAmountInput, SwapToggleButton, SwapButton, SwapMessage, SwapToast } from '@coinbase/onchainkit/swap';
 import { MYU_TOKEN, SWAP_FROM_TOKENS } from '@/app/config/onchainkit';
 import { Infinity as InfinityIcon, Map as MapIcon, Award } from 'lucide-react';
@@ -381,48 +382,6 @@ export default function SinglePlayerPage() {
       <span className="text-[10px] text-gray-600">empty</span>
     );
 
-  // Whether this run will be recorded: the module only accepts writes from a
-  // verified wallet, so say plainly what is happening and offer a way back.
-  const SaveStatus = ({ compact = false }: { compact?: boolean }) => {
-    const wrap = compact
-      ? 'mt-1 flex items-center justify-center gap-2 text-[10px]'
-      : 'mt-3 border-t border-gray-700 pt-2 text-xs flex flex-col gap-2';
-    if (!address) {
-      return (
-        <div className={wrap}>
-          <span className="text-yellow-400">Guest — scores are not saved</span>
-          <ConnectWalletButton
-            className={`rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 font-bold text-white ${compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-2'}`}
-          />
-        </div>
-      );
-    }
-    if (bound) {
-      return (
-        <div className={wrap}>
-          <span className={runId === null ? 'text-gray-400' : 'text-green-400'}>
-            {runId === null ? 'Starting run…' : 'Saving your score'}
-          </span>
-        </div>
-      );
-    }
-    if (binding) {
-      return (
-        <div className={wrap}>
-          <span className="text-cyan-300">Verifying wallet — sign the message to save scores</span>
-        </div>
-      );
-    }
-    return (
-      <div className={wrap}>
-        <span className="text-red-400">Wallet unverified — this run will not be saved</span>
-        <Button size="sm" variant="outline" onClick={retryBinding} className="border-cyan-500 text-cyan-300">
-          Verify wallet
-        </Button>
-      </div>
-    );
-  };
-
   // Single-player is always available — no wallet required. Connecting a wallet
   // adds score persistence, leaderboards, and $MYU continues.
 
@@ -522,7 +481,16 @@ export default function SinglePlayerPage() {
                   </div>
                 </div>
               )}
-              {touch && <SaveStatus compact />}
+              {touch && (
+                <RunSaveStatus
+                  address={address}
+                  bound={bound}
+                  binding={binding}
+                  retryBinding={retryBinding}
+                  runId={runId}
+                  compact
+                />
+              )}
 
               <div className="flex justify-center">
                 <div className="inline-block relative border-4 border-cyan-500 rounded" style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.2)' }}>
@@ -568,7 +536,13 @@ export default function SinglePlayerPage() {
                   <span className="text-white font-bold">{getLevelInStage(gameState.level)} / {LEVELS_PER_STAGE}</span>
                 </div>
               </div>
-              <SaveStatus />
+              <RunSaveStatus
+                address={address}
+                bound={bound}
+                binding={binding}
+                retryBinding={retryBinding}
+                runId={runId}
+              />
             </Card>
 
             {/* Journey milestone: stage cleared → NFT mint unlocked */}
