@@ -99,6 +99,11 @@
     background: linear-gradient(135deg, #0a0e27 0%, #1a0a2e 50%, #0f0a1e 100%);
     color: hsl(var(--foreground));
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Inter is not loaded by this stylesheet: OnchainKit injects it (plus
+       its theme fonts) on every page that mounts the providers, and the
+       site has rendered in Inter since launch. If OnchainKit ever stops
+       injecting fonts, load Inter here or the site falls back to the
+       system font. */
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 

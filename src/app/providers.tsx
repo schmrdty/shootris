@@ -5,12 +5,11 @@ import { usePathname } from 'next/navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
+import { coinbaseWallet, injected } from 'wagmi/connectors';
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { base, mainnet } from 'wagmi/chains';
 import { createPublicClient } from 'viem';
 import { ONCHAINKIT_API_KEY, ONCHAINKIT_PROJECT_ID } from './config/onchainkit';
-import { SITE_URL } from '@/lib/share';
 import { GameThemeProvider } from '@/lib/theme';
 import { CollectionProvider } from '@/lib/collection';
 import { WalletReconnect } from '@/components/WalletReconnect';
@@ -24,10 +23,6 @@ import { logWallet } from '@/lib/walletLog';
 // of the rest — smart wallets (Base Account, Coinbase Smart Wallet) and EOAs
 // (Coinbase Wallet extension, MetaMask, Rabby, Phantom, Trust, any injected).
 // Browser-extension wallets are also discovered automatically via EIP-6963.
-// Optional: a WalletConnect (Reown) project id enables the QR option for
-// mobile wallets. Without one, that entry simply isn't offered.
-const WALLETCONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
-
 const wagmiConfig = createConfig({
   chains: [base],
   connectors: [
@@ -36,21 +31,14 @@ const wagmiConfig = createConfig({
     // to Coinbase Wallet. preference 'all' covers the smart wallet, the
     // extension and the mobile app.
     coinbaseWallet({ appName: 'Shootris', preference: 'all' }),
-    // QR for mobile wallets (Rainbow, Zerion, ...) when a project id is set
-    ...(WALLETCONNECT_PROJECT_ID
-      ? [
-          walletConnect({
-            projectId: WALLETCONNECT_PROJECT_ID,
-            showQrModal: true,
-            metadata: {
-              name: 'Shootris',
-              description: 'Shootris on Base',
-              url: SITE_URL,
-              icons: [`${SITE_URL}/brand/icon-1024.png`],
-            },
-          }),
-        ]
-      : []),
+    // WalletConnect is deliberately NOT in this list. A connector configured
+    // here joins wagmi's reconnect path, which runs on every page load, and
+    // the WalletConnect provider phones home to Reown the moment it is
+    // initialised (with showQrModal it also pulls the whole AppKit UI and
+    // its Google Fonts). Inside a Farcaster/Base mini-app webview that
+    // load-time work can stall reconnect and leave the app stuck on its
+    // splash screen. The QR option is instead created on demand, at the
+    // moment the player taps it, in ConnectWalletButton.
     // MetaMask is deliberately absent: its SDK connector can hang forever
     // inside a mini-app webview, which stalls wagmi's reconnect for
     // everyone. injected() picks up the MetaMask extension through EIP-6963,

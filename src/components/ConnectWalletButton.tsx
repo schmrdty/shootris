@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
+import { walletConnect } from 'wagmi/connectors';
+import { SITE_URL } from '@/lib/share';
 import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import { base } from 'wagmi/chains';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,6 +21,25 @@ import { QrCode, Wallet as WalletIcon } from 'lucide-react';
  */
 
 const FARCASTER_IDS = new Set(['farcaster', 'farcasterFrame', 'farcasterMiniApp']);
+
+// With a Reown project id set, the picker offers a QR code for mobile
+// wallets. The connector is built HERE, on tap, never in the wagmi config:
+// configured connectors initialise during reconnect on every page load, and
+// WalletConnect's load-time network calls have stalled the Farcaster
+// mini-app on its splash screen. The trade-off is that a QR session is not
+// auto-restored on the next visit; the player scans again.
+const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
+const makeWalletConnect = () =>
+  walletConnect({
+    projectId: WC_PROJECT_ID,
+    showQrModal: true,
+    metadata: {
+      name: 'Shootris',
+      description: 'Shootris on Base',
+      url: SITE_URL,
+      icons: [`${SITE_URL}/brand/icon-1024.png`],
+    },
+  });
 // Coinbase Wallet and "Base Account" are the same product; Coinbase renamed
 // the app back to Coinbase Wallet, so show one entry under that name.
 const COINBASE_IDS = new Set(['coinbaseWalletSDK', 'coinbaseWallet', 'baseAccount', 'com.coinbase.wallet']);
@@ -45,6 +66,8 @@ export function ConnectWalletButton({ className = '', label = 'Connect Wallet' }
     for (const connector of connectors) {
       // The embedded Farcaster wallet connects itself inside a mini app
       if (FARCASTER_IDS.has(connector.id) || FARCASTER_IDS.has(connector.type)) continue;
+      // Rendered as the dedicated QR row below, not as a list entry
+      if (connector.id === 'walletConnect') continue;
       // One Coinbase entry, whichever variant wagmi offers first
       const key = COINBASE_IDS.has(connector.id) ? 'coinbase' : connector.id;
       if (seen.has(key)) continue;
@@ -137,6 +160,27 @@ export function ConnectWalletButton({ className = '', label = 'Connect Wallet' }
                   <span className="flex-1">{displayName(connector)}</span>
                 </button>
               ))}
+              {WC_PROJECT_ID && (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() =>
+                    connect(
+                      // Reuse the connector once wagmi has set it up;
+                      // first tap hands wagmi the factory instead.
+                      { connector: connectors.find((c) => c.id === 'walletConnect') ?? makeWalletConnect() },
+                      {
+                        onSuccess: () => setOpen(false),
+                        onError: (e) => setFailed(e.message),
+                      }
+                    )
+                  }
+                  className="flex w-full items-center gap-3 rounded-lg border border-gray-700 bg-black/60 px-4 py-3 text-left font-bold text-white transition-colors hover:border-cyan-400 disabled:opacity-50"
+                >
+                  <QrCode className="h-6 w-6 text-cyan-300" aria-hidden="true" />
+                  <span className="flex-1">Scan with a mobile wallet</span>
+                </button>
+              )}
               {options.length === 0 && !fallback && (
                 <p className="text-sm text-yellow-400">
                   No wallet found in this browser. Install one, or open Shootris in Farcaster or the Coinbase Wallet app.
