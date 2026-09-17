@@ -57,6 +57,13 @@ export default function Home() {
   // "connecting" indefinitely, and the menu works without one anyway.
   const walletPending = status === 'connecting' || status === 'reconnecting';
 
+  // This page is prerendered at build time, when there is no wallet to ask.
+  // Rendering wallet state on the first client pass would therefore disagree
+  // with the HTML and make React throw the card away and rebuild it. Hold the
+  // neutral "connecting" line until after mount, then show the real state.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // Allow viewing menu without wallet - only require wallet for gameplay
 
   return (
@@ -86,7 +93,9 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {address ? (
+            {!mounted ? (
+              <p className="text-center text-lg font-bold text-cyan-300">Connecting wallet…</p>
+            ) : address ? (
               <div className="text-center space-y-2">
                 <p className="text-lg font-bold text-green-400">
                   {/* Farcaster handle when signed in there, otherwise Basename/ENS/address */}
