@@ -19,14 +19,14 @@ export default function HowToPlayPage() {
 
         <Card className="bg-black/80 border-purple-500/50">
           <CardHeader>
-            <CardTitle className="text-xl text-purple-400">Inverted Tetris Basics</CardTitle>
-            <CardDescription>Classic Tetris, but pieces rise from the bottom</CardDescription>
+            <CardTitle className="text-xl text-purple-400">Shootris Basics</CardTitle>
+            <CardDescription>Pieces rise from the bottom instead of falling</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-gray-300">
             <div>
               <h3 className="font-bold text-white mb-2">Gameplay:</h3>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Tetrominoes spawn at the <span className="text-purple-400 font-bold">bottom</span> of the board</li>
+                <li>Shootris pieces spawn at the <span className="text-purple-400 font-bold">bottom</span> of the board</li>
                 <li>Pieces automatically move <span className="text-purple-400 font-bold">upward</span> toward the top</li>
                 <li>Complete horizontal lines to clear them and score points</li>
                 <li>Game ends when a new piece cannot spawn at the bottom</li>
@@ -38,8 +38,8 @@ export default function HowToPlayPage() {
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li><kbd className="px-2 py-1 bg-gray-800 rounded">← →</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">A D</kbd>: Move piece left/right</li>
                 <li><kbd className="px-2 py-1 bg-gray-800 rounded">↓</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">S</kbd>: Rotate piece</li>
-                <li><kbd className="px-2 py-1 bg-gray-800 rounded">↑</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">W</kbd>: Move the tetromino forward one space</li>
-                <li><kbd className="px-2 py-1 bg-gray-800 rounded">Space</kbd>: Shoot the tetromino (instant launch to the top)</li>
+                <li><kbd className="px-2 py-1 bg-gray-800 rounded">↑</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">W</kbd>: Move the Shootris piece forward one space</li>
+                <li><kbd className="px-2 py-1 bg-gray-800 rounded">Space</kbd>: Shoot the Shootris piece (instant launch to the top)</li>
                 <li><kbd className="px-2 py-1 bg-gray-800 rounded">Shift</kbd> or <kbd className="px-2 py-1 bg-gray-800 rounded">C</kbd>: Hold piece</li>
               </ul>
             </div>
@@ -48,7 +48,7 @@ export default function HowToPlayPage() {
               <h3 className="font-bold text-white mb-2">Phone &amp; Tablet Controls:</h3>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li><span className="font-bold text-cyan-400">Joystick</span> (left): slide left/right to move, push up to move forward, flick down to rotate</li>
-                <li><span className="font-bold text-white">Crosshair</span> (right): shoot the tetromino</li>
+                <li><span className="font-bold text-white">Crosshair</span> (right): shoot the Shootris piece</li>
                 <li><span className="font-bold text-purple-300">Rotate</span> and <span className="font-bold text-yellow-300">Hold</span> buttons sit beside it</li>
               </ul>
             </div>
@@ -57,8 +57,8 @@ export default function HowToPlayPage() {
               <h3 className="font-bold text-white mb-2">Difficulty Curve:</h3>
               <p className="text-sm">
                 Every <span className="text-yellow-400 font-bold">10 lines</span> cleared = 1 level, and every{' '}
-                <span className="text-yellow-400 font-bold">25 levels</span> = 1 stage. Piece speed ramps up each level
-                and resets at the start of each stage — clearing a stage grants a{' '}
+                <span className="text-yellow-400 font-bold">10 levels</span> = 1 stage. Piece speed ramps up each level
+                and resets at the start of each stage, and clearing a stage grants a{' '}
                 <span className="text-cyan-400 font-bold">score bonus and a fresh board</span>.
               </p>
             </div>
@@ -78,7 +78,7 @@ export default function HowToPlayPage() {
                 <li>Each player's pieces spawn at their own floor and rise toward the middle</li>
                 <li>Clear lines that touch the obstacle band to remove shared obstacles</li>
                 <li>Break through the obstacle band to reach opponent's side</li>
-                <li><span className="text-green-400 font-bold">Win condition:</span> Get your tetromino to hit and lock on opponent's floor</li>
+                <li><span className="text-green-400 font-bold">Win condition:</span> Get your Shootris piece to hit and lock on opponent's floor</li>
               </ul>
             </div>
           </CardContent>

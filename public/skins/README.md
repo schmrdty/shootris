@@ -16,7 +16,7 @@ public/skins/
 vibe.market card. `gunmetal` is never minted — it is a free choice for every
 player in Settings → Card Art.
 
-**Filenames are lowercase single letters** matching the tetromino:
+**Filenames are lowercase single letters** matching the Shootris piece:
 `i o t s z j l`. Anything else is ignored.
 
 ## What each file must be
@@ -25,7 +25,7 @@ player in Settings → Card Art.
 - **Visible separation between neighbouring cells** — either transparent
   inner padding, or edge definition drawn into the tile itself (a bevel or a
   dark border). The shipped sets use the second approach.
-- One self-contained block face — **not** the whole tetromino shape
+- One self-contained block face, **not** the whole Shootris piece shape
 - Readable at 13 px (squint test)
 
 ## Why only 7 per set

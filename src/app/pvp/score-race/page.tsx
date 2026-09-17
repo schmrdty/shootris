@@ -49,7 +49,7 @@ export default function ScoreRacePage() {
   // Charge the $MYU entry fee (if configured) before running a matchmaking action
   const withEntryFee = useCallback(async (action: () => void) => {
     if (!bound) {
-      alert('Verify your wallet first — the game server only accepts matches from a verified wallet.');
+      alert('Verify your wallet first: the game server only accepts matches from a verified wallet.');
       retryBinding();
       return;
     }
@@ -157,7 +157,7 @@ export default function ScoreRacePage() {
   }, [inviteCode]);
 
   const shareOnFarcaster = useCallback(() => {
-    const text = `Join my Shootris Score Race match! Code: ${inviteCode} — the invite expires in ${MATCH_TIMEOUT_LABEL}, so jump in now.`;
+    const text = `Join my Shootris Score Race match! Code: ${inviteCode}. The invite expires in ${MATCH_TIMEOUT_LABEL}, so jump in now.`;
     shareCast(text);
   }, [inviteCode]);
 
@@ -206,7 +206,7 @@ export default function ScoreRacePage() {
             </p>
             <p className="text-sm text-gray-300 mt-1">
               Your balance: {myuBalance !== undefined ? Number(myuBalance) / 10 ** MYU_DECIMALS : '…'} $MYU
-              {!hasEnough && <span className="text-red-400 ml-2">— not enough; you can swap for $MYU in-app</span>}
+              {!hasEnough && <span className="text-red-400 ml-2">(not enough; you can swap for $MYU in-app)</span>}
             </p>
           </Card>
         )}
@@ -260,7 +260,7 @@ export default function ScoreRacePage() {
               <p className="text-3xl font-bold text-green-400 text-center tracking-wider">{inviteCode}</p>
               <p className={`mt-2 text-center text-sm font-bold ${inviteLeftMs === 0 ? 'text-red-400' : 'text-yellow-400'}`}>
                 {inviteLeftMs === 0
-                  ? 'Invite expired — create a new match'
+                  ? 'Invite expired. Create a new match'
                   : `Expires in ${formatCountdown(inviteLeftMs ?? 0)}`}
               </p>
             </div>

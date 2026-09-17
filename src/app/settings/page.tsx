@@ -67,7 +67,7 @@ export default function SettingsPage() {
               />
             </div>
             <p className="text-xs text-gray-500">
-              Current theme: {theme}. Saved on this device — no wallet needed.
+              Current theme: {theme}. Saved on this device, no wallet needed.
             </p>
           </CardContent>
         </Card>
@@ -107,7 +107,7 @@ export default function SettingsPage() {
                     <p className="text-sm font-bold text-white">{SET_LABELS[p.set]}</p>
                     <p className="text-xs text-gray-400">
                       {p.held.length}/{p.total}
-                      {p.held.length > 0 && p.held.length < p.total && ` — have ${p.held.join(' ')}`}
+                      {p.held.length > 0 && p.held.length < p.total && ` (have ${p.held.join(' ')})`}
                     </p>
                   </div>
                   {p.complete ? (

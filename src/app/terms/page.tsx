@@ -56,7 +56,7 @@ export default function TermsPage() {
             <div className="space-y-2">
               <h3 className="font-bold text-white text-base">4. Game Rules</h3>
               <p>
-                Shootris is an inverted Tetris game where pieces rise from the bottom. The application uses SpacetimeDB to
+                Shootris is a block puzzle game where pieces rise from the bottom instead of falling. The application uses SpacetimeDB to
                 store game state, scores, and match data. By playing, you consent to your game data being stored.
               </p>
             </div>

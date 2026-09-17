@@ -14,6 +14,7 @@ import { SITE_URL } from '@/lib/share';
 import { GameThemeProvider } from '@/lib/theme';
 import { CollectionProvider } from '@/lib/collection';
 import { WalletReconnect } from '@/components/WalletReconnect';
+import { BaseChainGuard } from '@/components/BaseChainGuard';
 import { WalletDebug } from '@/components/WalletDebug';
 import { logWallet } from '@/lib/walletLog';
 
@@ -43,7 +44,7 @@ const wagmiConfig = createConfig({
             showQrModal: true,
             metadata: {
               name: 'Shootris',
-              description: 'Inverted Tetris on Base',
+              description: 'Shootris on Base',
               url: SITE_URL,
               icons: [`${SITE_URL}/brand/icon-1024.png`],
             },
@@ -129,6 +130,7 @@ export function Providers({ children }: { children: ReactNode }) {
           }}
         >
           <WalletReconnect />
+          <BaseChainGuard />
           <WalletDebug />
           <CollectionProvider>
             <GameThemeProvider>{children}</GameThemeProvider>

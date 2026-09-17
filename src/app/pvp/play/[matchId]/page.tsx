@@ -412,7 +412,7 @@ export default function PvpPlayPage() {
           <p className="text-gray-400 text-sm mb-1">The game starts automatically when someone joins.</p>
           <p className={`mb-4 text-sm font-bold ${inviteLeftMs === 0 ? 'text-red-400' : 'text-cyan-300'}`}>
             {inviteLeftMs === 0
-              ? 'Invite expired — the match was cancelled'
+              ? 'Invite expired. The match was cancelled'
               : `Invite expires in ${formatCountdown(inviteLeftMs ?? MATCH_TIMEOUT_MS)}`}
           </p>
           <Button onClick={() => router.push('/pvp')} variant="outline">
@@ -509,12 +509,12 @@ export default function PvpPlayPage() {
                 opponentIdleLeftMs !== null &&
                 opponentIdleLeftMs < MATCH_TIMEOUT_MS - 60_000 && (
                   <p className="mt-3 text-center text-sm font-bold text-yellow-400">
-                    Opponent idle — you win in {formatCountdown(opponentIdleLeftMs)} if they stay away
+                    Opponent idle. You win in {formatCountdown(opponentIdleLeftMs)} if they stay away
                   </p>
                 )}
               {gameState.gameOver && !matchCompleted && (
                 <p className="text-center text-red-400 font-bold mt-3">
-                  {isFloorDuel ? 'Topped out!' : 'Topped out — your score stands until time runs out.'}
+                  {isFloorDuel ? 'Topped out!' : 'Topped out. Your score stands until time runs out.'}
                 </p>
               )}
               <div className="mt-4 p-3 bg-gray-900/50 rounded border border-gray-700 hidden md:block">
@@ -616,7 +616,7 @@ export default function PvpPlayPage() {
             <DialogDescription className="text-center text-gray-300">
               {matchCancelled
                 ? 'This match was cancelled.'
-                : `Final score — You: ${isP1 ? Number(match.player1Score) : Number(match.player2Score)} | Opponent: ${Number(opponentScore)}`}
+                : `Final score. You: ${isP1 ? Number(match.player1Score) : Number(match.player2Score)} | Opponent: ${Number(opponentScore)}`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">

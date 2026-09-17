@@ -30,7 +30,7 @@ export function GetMyuDialog({ open, onOpenChange, onSwapSuccess }: GetMyuDialog
         <DialogHeader>
           <DialogTitle className="text-2xl text-cyan-400">Get $MYU</DialogTitle>
           <DialogDescription className="text-gray-300">
-            Swap ETH or other tokens you hold on Base for $MYU — no need to leave the game.
+            Swap ETH or other tokens you hold on Base for $MYU, no need to leave the game.
           </DialogDescription>
         </DialogHeader>
         {MYU_CONFIGURED ? (

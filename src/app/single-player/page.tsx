@@ -24,7 +24,8 @@ import { ConnectWalletButton } from '@/components/ConnectWalletButton';
 import { RunSaveStatus } from '@/components/RunSaveStatus';
 import { Swap, SwapAmountInput, SwapToggleButton, SwapButton, SwapMessage, SwapToast } from '@coinbase/onchainkit/swap';
 import { MYU_TOKEN, SWAP_FROM_TOKENS } from '@/app/config/onchainkit';
-import { Infinity as InfinityIcon, Map as MapIcon, Award } from 'lucide-react';
+import { Infinity as InfinityIcon, Map as MapIcon, Award, Pause, Play } from 'lucide-react';
+import { StageBreakCard, type StageBreak } from '@/components/StageBreakCard';
 
 type PlayMode = 'free' | 'journey';
 
@@ -65,6 +66,20 @@ export default function SinglePlayerPage() {
   const [levelDeadline, setLevelDeadline] = useState<number | null>(null);
   const [nowTick, setNowTick] = useState(Date.now());
   const [mintUnlocked, setMintUnlocked] = useState(false);
+  // Three separate reasons the board can be still: the player asked for it,
+  // a Journey stage break is waiting to be acknowledged, or a paid continue
+  // is giving them a moment before pieces start moving again.
+  const [userPaused, setUserPaused] = useState(false);
+  const [stageBreak, setStageBreak] = useState<StageBreak | null>(null);
+  const [grace, setGrace] = useState(false);
+  const halted = userPaused || stageBreak !== null || grace;
+  const boardRef = useRef<HTMLDivElement>(null);
+  const gameOverRef = useRef(false);
+  gameOverRef.current = gameState.gameOver;
+  const scoreRef = useRef(gameState.score);
+  scoreRef.current = gameState.score;
+  const linesRef = useRef(gameState.lines);
+  linesRef.current = gameState.lines;
   const gameLoopRef = useRef<number | null>(null);
   const { sendTransactionAsync } = useSendTransaction();
   const { isEarthen, cellStyle } = useGameTheme();
@@ -92,16 +107,44 @@ export default function SinglePlayerPage() {
   });
   const hasEnoughMyu = (myuBalance ?? BigInt(0)) >= continuePrice;
 
-  // Stage-clear celebration
+  // The engine only moves pieces while isPaused is false, so keep that flag
+  // in step with whichever reason is currently holding the board.
+  useEffect(() => {
+    setGameState((prev) => (prev.isPaused === halted ? prev : { ...prev, isPaused: halted }));
+  }, [halted]);
+
+  const pause = useCallback(() => {
+    if (gameOverRef.current) return;
+    setUserPaused(true);
+  }, []);
+  const resume = useCallback(() => setUserPaused(false), []);
+  const togglePause = useCallback(() => {
+    if (gameOverRef.current) return;
+    setUserPaused((p) => !p);
+  }, []);
+
+  // Stage clear: Free Play gets a banner, Journey stops for a card the player
+  // has to acknowledge (see StageBreakCard).
   const stage = getStage(gameState.level);
   const prevStageRef = useRef(stage);
   const [clearedStageBanner, setClearedStageBanner] = useState<number | null>(null);
   useEffect(() => {
     if (stage > prevStageRef.current) {
-      setClearedStageBanner(prevStageRef.current);
+      const cleared = prevStageRef.current;
       prevStageRef.current = stage;
-      // Journey milestone: clearing a stage (100 lines) unlocks the NFT mint
-      if (mode === 'journey') setMintUnlocked(true);
+      if (mode === 'journey') {
+        // Journey milestone: clearing a stage (100 lines) unlocks the NFT mint
+        setMintUnlocked(true);
+        setStageBreak({
+          cleared,
+          next: stage,
+          bonus: 5000 * cleared,
+          score: scoreRef.current,
+          lines: linesRef.current,
+        });
+        return;
+      }
+      setClearedStageBanner(cleared);
       const t = setTimeout(() => setClearedStageBanner(null), 2500);
       return () => clearTimeout(t);
     }
@@ -115,6 +158,9 @@ export default function SinglePlayerPage() {
     setLastSnapshot(null);
     setShowContinueModal(false);
     setMintUnlocked(false);
+    setUserPaused(false);
+    setStageBreak(null);
+    setGrace(false);
     setRunId(null);
     setRunNonce((n) => n + 1);
   }, []);
@@ -151,11 +197,30 @@ export default function SinglePlayerPage() {
     connection.reducers.startSingleRun(address.toLowerCase(), emptyBoard, 1);
   }, [mode, connection, address, bound, runNonce]);
 
-  // Journey level timer: fresh budget on each new level (or new run/continue)
+  // Journey level timer: a fresh budget on each new level (or new run), and
+  // the clock genuinely stops while the board is held, rather than handing
+  // out a full new budget on every resume.
+  const frozenMsRef = useRef<number | null>(null);
   useEffect(() => {
-    if (mode !== 'journey' || gameState.gameOver || gameState.isPaused) return;
+    if (mode !== 'journey') return;
+    frozenMsRef.current = null;
     setLevelDeadline(Date.now() + levelTimeBudget(gameState.level) * 1000);
-  }, [mode, gameState.level, gameState.isPaused, runNonce, gameState.gameOver]);
+  }, [mode, gameState.level, runNonce]);
+
+  useEffect(() => {
+    if (mode !== 'journey') return;
+    if (halted) {
+      setLevelDeadline((deadline) => {
+        if (deadline === null) return deadline;
+        frozenMsRef.current = Math.max(0, deadline - Date.now());
+        return null;
+      });
+    } else if (frozenMsRef.current !== null) {
+      const remaining = frozenMsRef.current;
+      frozenMsRef.current = null;
+      setLevelDeadline(Date.now() + remaining);
+    }
+  }, [mode, halted]);
 
   useEffect(() => {
     if (mode !== 'journey' || levelDeadline === null || gameState.gameOver) return;
@@ -164,16 +229,19 @@ export default function SinglePlayerPage() {
   }, [mode, levelDeadline, gameState.gameOver]);
 
   useEffect(() => {
-    if (mode !== 'journey' || levelDeadline === null || gameState.gameOver || gameState.isPaused) return;
+    if (mode !== 'journey' || levelDeadline === null || gameState.gameOver || halted) return;
     if (nowTick >= levelDeadline) {
       setGameState((prev) => ({ ...prev, gameOver: true }));
     }
-  }, [mode, levelDeadline, nowTick, gameState.gameOver, gameState.isPaused]);
+  }, [mode, levelDeadline, nowTick, gameState.gameOver, halted]);
 
-  const journeyTimeLeft =
-    mode === 'journey' && levelDeadline !== null && !gameState.gameOver
-      ? Math.max(0, Math.ceil((levelDeadline - nowTick) / 1000))
-      : null;
+  const journeyMsLeft =
+    mode !== 'journey' || gameState.gameOver
+      ? null
+      : levelDeadline !== null
+        ? Math.max(0, levelDeadline - nowTick)
+        : frozenMsRef.current;
+  const journeyTimeLeft = journeyMsLeft === null ? null : Math.ceil(journeyMsLeft / 1000);
 
   // Game over: snapshot the board, record the score, and prompt to continue
   useEffect(() => {
@@ -220,6 +288,15 @@ export default function SinglePlayerPage() {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (gameState.gameOver) return;
 
+      // P (or Escape) pauses and unpauses; nothing else reaches the board
+      // while it is held.
+      if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+        e.preventDefault();
+        togglePause();
+        return;
+      }
+      if (halted) return;
+
       switch (e.key) {
         case 'ArrowLeft':
         case 'a':
@@ -258,7 +335,38 @@ export default function SinglePlayerPage() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [gameState.gameOver]);
+  }, [gameState.gameOver, halted, togglePause]);
+
+  // Leaving the game pauses it: switching tab or window, and on desktop
+  // clicking anywhere outside the board that is not itself a control.
+  useEffect(() => {
+    if (mode === null) return;
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') pause();
+    };
+    window.addEventListener('blur', pause);
+    document.addEventListener('visibilitychange', onHidden);
+    return () => {
+      window.removeEventListener('blur', pause);
+      document.removeEventListener('visibilitychange', onHidden);
+    };
+  }, [mode, pause]);
+
+  useEffect(() => {
+    // Touch devices pause from the button in the header: on a phone every
+    // tap outside the board is either the control deck or a scroll.
+    if (touch || mode === null || halted || gameState.gameOver) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      if (boardRef.current?.contains(el)) return;
+      // Buttons, links and dialogs are interactions in their own right
+      if (el.closest('button, a, input, select, textarea, [role="dialog"]')) return;
+      pause();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [touch, mode, halted, gameState.gameOver, pause]);
 
   const handlePayAndContinue = useCallback(async () => {
     if (!address || !lastSnapshot || payingRef.current) return;
@@ -298,13 +406,13 @@ export default function SinglePlayerPage() {
         currentPiece: null,
         isPaused: true,
       });
+      setGrace(true);
+      setUserPaused(false);
       setGameState(restoredState);
       setShowContinueModal(false);
 
       // Give grace period
-      setTimeout(() => {
-        setGameState(prev => ({ ...prev, isPaused: false }));
-      }, 3000);
+      setTimeout(() => setGrace(false), 3000);
     } catch (error) {
       console.error('Payment failed:', error);
       alert('Payment failed. Please try again.');
@@ -420,7 +528,7 @@ export default function SinglePlayerPage() {
                 <MapIcon className="h-5 w-5" aria-hidden="true" /> Journey
               </p>
               <p className="text-sm text-gray-300 mt-1">
-                Beat the clock through 10-line levels and 10-level stages — each level faster and
+                Beat the clock through 10-line levels and 10-level stages, each one faster and
                 shorter on time. Clear Stage 1 (100 lines) to unlock the collector&apos;s NFT mint.
               </p>
             </button>
@@ -443,15 +551,31 @@ export default function SinglePlayerPage() {
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-purple-400">SHOOTRIS</h2>
                   <p className="text-xs text-gray-400">
-                    {mode === 'journey' ? 'Journey' : 'Free Play'} — Pieces Rise from Bottom
+                    {mode === 'journey' ? 'Journey' : 'Free Play'} · Pieces Rise from Bottom
                   </p>
+                  {/* Where you are in the run, without looking away from the
+                      board. Phones get the same numbers in the strip below. */}
+                  {!touch && (
+                    <p className="mt-0.5 text-sm font-bold tabular-nums text-cyan-200">
+                      SCORE {gameState.score.toLocaleString()} · STAGE {stage} · LEVEL{' '}
+                      {getLevelInStage(gameState.level)}/{LEVELS_PER_STAGE}
+                    </p>
+                  )}
                   {journeyTimeLeft !== null && (
-                    <p className={`text-2xl font-black ${journeyTimeLeft <= 10 ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {journeyTimeLeft}s
+                    <p className={`text-2xl font-black ${journeyTimeLeft <= 10 && !halted ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {journeyTimeLeft}s{halted ? ' (held)' : ''}
                     </p>
                   )}
                 </div>
-                <div className="w-20" />
+                <Button
+                  variant="outline"
+                  aria-label={userPaused ? 'Resume' : 'Pause'}
+                  disabled={mode === null || gameState.gameOver || stageBreak !== null}
+                  onClick={togglePause}
+                  className="w-20 border-cyan-500 text-cyan-300"
+                >
+                  {userPaused ? <Play className="h-4 w-4" aria-hidden="true" /> : <Pause className="h-4 w-4" aria-hidden="true" />}
+                </Button>
               </div>
 
               {/* Compact hold / stats / next strip — replaces the side panels on phones */}
@@ -492,7 +616,7 @@ export default function SinglePlayerPage() {
                 />
               )}
 
-              <div className="flex justify-center">
+              <div className="flex justify-center" ref={boardRef}>
                 <div className="inline-block relative border-4 border-cyan-500 rounded" style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.2)' }}>
                   {renderBoard()}
                   {animRows.map((y) => (
@@ -508,7 +632,7 @@ export default function SinglePlayerPage() {
               {/* Controls hint */}
               <div className="mt-4 p-3 bg-gray-900/50 rounded border border-gray-700 hidden md:block">
                 <p className="text-xs text-gray-400 text-center">
-                  <span className="font-bold text-purple-400">Controls:</span> ← → or A/D: Move | ↑ or W: Forward | ↓ or S: Rotate | Space: Shoot | Shift/C: Hold
+                  <span className="font-bold text-purple-400">Controls:</span> ← → or A/D: Move | ↑ or W: Forward | ↓ or S: Rotate | Space: Shoot | Shift/C: Hold | P: Pause
                 </p>
               </div>
             </Card>
@@ -552,7 +676,7 @@ export default function SinglePlayerPage() {
                   <Award className="h-5 w-5" aria-hidden="true" /> STAGE CONQUERED
                 </p>
                 <p className="text-sm text-gray-300 mt-1">
-                  100 lines cleared — collector&apos;s NFT mint unlocked.
+                  100 lines cleared. Collector&apos;s NFT mint unlocked.
                 </p>
                 {process.env.NEXT_PUBLIC_MILESTONE_NFT_URL ? (
                   <a href={process.env.NEXT_PUBLIC_MILESTONE_NFT_URL} target="_blank" rel="noopener noreferrer">
@@ -626,8 +750,43 @@ export default function SinglePlayerPage() {
           onRotate={() => touchAction(rotatePieceAction)}
           onHold={() => touchAction(holdPiece)}
           canHold={gameState.canHold}
-          disabled={gameState.gameOver || showContinueModal}
+          disabled={gameState.gameOver || showContinueModal || halted}
         />
+      )}
+
+      {/* Journey stage break: acknowledged by the player, which starts the
+          first level of the next stage. */}
+      {stageBreak && (
+        <StageBreakCard stageBreak={stageBreak} onStart={() => setStageBreak(null)} />
+      )}
+
+      {/* Paused */}
+      {userPaused && mode !== null && !gameState.gameOver && !stageBreak && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+          onClick={resume}
+        >
+          <Card
+            className="w-full max-w-xs border-4 border-cyan-400 bg-gray-950 p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-3xl font-black tracking-widest text-cyan-300">PAUSED</p>
+            <p className="mt-2 text-sm font-semibold text-gray-400">
+              {mode === 'journey' ? 'The level timer is stopped too.' : 'Nothing is moving.'}
+            </p>
+            <Button
+              onClick={resume}
+              autoFocus
+              className="mt-5 w-full bg-cyan-600 py-6 text-lg font-black text-white hover:bg-cyan-500"
+            >
+              Resume
+            </Button>
+            <Button variant="outline" onClick={handleQuit} className="mt-2 w-full">
+              Quit to Menu
+            </Button>
+            {!touch && <p className="mt-3 text-xs text-gray-500">Press P to resume</p>}
+          </Card>
+        </div>
       )}
 
       {/* Stage clear banner */}
@@ -635,7 +794,7 @@ export default function SinglePlayerPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
           <div className="bg-black/80 border-4 border-yellow-400 rounded-lg px-10 py-6 shadow-[0_0_40px_rgba(250,204,21,0.7)]">
             <p className="text-4xl font-black text-yellow-300 neon-yellow tracking-wider text-center">STAGE {clearedStageBanner} CLEAR!</p>
-            <p className="text-center text-cyan-300 font-bold mt-2">+{5000 * clearedStageBanner} BONUS — FRESH BOARD</p>
+            <p className="text-center text-cyan-300 font-bold mt-2">+{5000 * clearedStageBanner} BONUS · FRESH BOARD</p>
           </div>
         </div>
       )}
@@ -681,7 +840,7 @@ export default function SinglePlayerPage() {
             {address && MYU_CONFIGURED && !hasEnoughMyu && (
               <div className="rounded-lg border border-cyan-500/40 p-2">
                 <p className="text-center text-sm text-yellow-400 mb-1">
-                  Not enough $MYU — swap for it right here:
+                  Not enough $MYU. Swap for it right here:
                 </p>
                 <Swap onSuccess={() => refetchMyuBalance()}>
                   <SwapAmountInput label="Sell" swappableTokens={SWAP_FROM_TOKENS} token={SWAP_FROM_TOKENS[0]} type="from" />

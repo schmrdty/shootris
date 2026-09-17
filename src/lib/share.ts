@@ -7,7 +7,7 @@
 export const SITE_URL = `https://${process.env.NEXT_PUBLIC_HOST || 'shootris.schmidtiest.xyz'}`;
 
 export const DEFAULT_CAST_TEXT =
-  'Playing Shootris: Tetris flipped upside down. Pieces rise, you shoot them into place. Beat my score?';
+  'Playing Shootris: the blocks rise instead of falling, and you shoot them into place. Beat my score?';
 
 /** Web composer link — works from any browser, opens a draft cast. */
 export function castShareUrl(text: string = DEFAULT_CAST_TEXT, embed: string = SITE_URL): string {

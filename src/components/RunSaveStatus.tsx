@@ -30,7 +30,7 @@ export function RunSaveStatus({ address, bound, binding, retryBinding, runId, co
   if (!address) {
     return (
       <div className={wrap}>
-        <span className="text-yellow-400">Guest — scores are not saved</span>
+        <span className="text-yellow-400">Guest: scores are not saved</span>
         <ConnectWalletButton
           className={`rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 font-bold text-white ${
             compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-2'
@@ -53,14 +53,14 @@ export function RunSaveStatus({ address, bound, binding, retryBinding, runId, co
   if (binding) {
     return (
       <div className={wrap}>
-        <span className="text-cyan-300">Verifying wallet — sign the message to save scores</span>
+        <span className="text-cyan-300">Verifying wallet: sign the message to save scores</span>
       </div>
     );
   }
 
   return (
     <div className={wrap}>
-      <span className="text-red-400">Wallet unverified — this run will not be saved</span>
+      <span className="text-red-400">Wallet unverified: this run will not be saved</span>
       <Button size="sm" variant="outline" onClick={retryBinding} className="border-cyan-500 text-cyan-300">
         Verify wallet
       </Button>

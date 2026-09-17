@@ -9,7 +9,7 @@ require is that the art and the card names follow this spec exactly.
 
 ## 1. The shape problem (read this first)
 
-A tetromino is **not** a single picture in play. It rotates, and when a line
+A Shootris piece is **not** a single picture in play. It rotates, and when a line
 clears the piece gets **cut apart** — the cleared row vanishes and the rest
 of the piece stays on the board. So a beautiful whole-piece illustration
 cannot be pasted onto the board; it would tear, stretch, and rotate wrong.
@@ -66,7 +66,7 @@ public/skins/earthen/i.png     public/skins/collector/i.png
 ## 3. Card art specs (the NFT)
 
 - **Format:** PNG or JPG, 1024×1024
-- **Content:** the whole tetromino in its canonical shape above — the shape
+- **Content:** the whole Shootris piece in its canonical shape above, the shape
   must be unmistakable at a glance
 - **Leave ~10% margin** on all sides: vibe.market composites foil and wear
   effects over the art

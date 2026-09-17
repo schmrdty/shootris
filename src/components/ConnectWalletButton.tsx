@@ -37,7 +37,7 @@ export function ConnectWalletButton({ className = '', label = 'Connect Wallet' }
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
 
-  const options = useMemo(() => {
+  const { options, fallback } = useMemo(() => {
     const seen = new Set<string>();
     const list: Connector[] = [];
     let hasDiscovered = false;
@@ -55,12 +55,16 @@ export function ConnectWalletButton({ className = '', label = 'Connect Wallet' }
       list.push(connector);
     }
 
-    // The generic "Browser wallet" entry only helps when nothing announced
-    // itself; otherwise it is a duplicate of a named wallet above.
-    const pruned = hasDiscovered ? list.filter((c) => c.id !== 'injected') : list;
-    const rank = (c: Connector) =>
-      COINBASE_IDS.has(c.id) ? 0 : c.id === 'walletConnect' ? 2 : c.id === 'injected' ? 3 : 1;
-    return pruned.sort((a, b) => rank(a) - rank(b));
+    // The generic "Browser wallet" entry usually duplicates a named wallet
+    // above, so it drops out of the main list once anything announced
+    // itself. It stays available underneath as a fallback, because a wallet
+    // that only exposes window.ethereum would otherwise be unreachable.
+    const rank = (c: Connector) => (COINBASE_IDS.has(c.id) ? 0 : c.id === 'walletConnect' ? 2 : 1);
+    const injectedEntry = hasDiscovered ? list.find((c) => c.id === 'injected') : undefined;
+    const main = (hasDiscovered ? list.filter((c) => c.id !== 'injected') : list).sort(
+      (a, b) => rank(a) - rank(b)
+    );
+    return { options: main, fallback: injectedEntry };
   }, [connectors]);
 
   const openPicker = () => {
@@ -133,10 +137,28 @@ export function ConnectWalletButton({ className = '', label = 'Connect Wallet' }
                   <span className="flex-1">{displayName(connector)}</span>
                 </button>
               ))}
-              {options.length === 0 && (
+              {options.length === 0 && !fallback && (
                 <p className="text-sm text-yellow-400">
                   No wallet found in this browser. Install one, or open Shootris in Farcaster or the Coinbase Wallet app.
                 </p>
+              )}
+              {fallback && (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() =>
+                    connect(
+                      { connector: fallback },
+                      {
+                        onSuccess: () => setOpen(false),
+                        onError: (e) => setFailed(e.message),
+                      }
+                    )
+                  }
+                  className="w-full pt-1 text-center text-xs text-gray-400 underline transition-colors hover:text-cyan-300 disabled:opacity-50"
+                >
+                  My wallet is not listed
+                </button>
               )}
               {failed && <p className="text-sm text-red-400">{failed}</p>}
               <p className="pt-1 text-center text-[11px] text-gray-500">

@@ -44,11 +44,11 @@ const embed = (actionType: 'launch_miniapp' | 'launch_frame') =>
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: 'Shootris Inverted Tetris',
+  title: 'Shootris',
   description:
-    'Experience an exciting twist on Tetris where blocks rise! Engage in solo play or PVP duels in a seamless, cross-platform mini-app. Spend $MYU to continue your run. Join now and defy gravity!',
+    'Blocks rise instead of falling. Shoot them into place, clear lines, and climb the leaderboard in solo play or PVP duels. Spend $MYU to continue your run.',
   openGraph: {
-    title: 'Shootris — Inverted Tetris',
+    title: 'Shootris',
     description: 'Blocks rise instead of fall. Solo journey, PvP duels, and $MYU continues.',
     images: [{ url: '/brand/share.png', width: 1200, height: 630 }],
   },

@@ -40,3 +40,6 @@ cX/
 
 # Local app data (notification tokens)
 /data
+
+# Editor backups of art files (never ship, never commit)
+*~

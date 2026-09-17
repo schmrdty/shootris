@@ -71,16 +71,17 @@ export default function Home() {
           <WalletConnect />
         </div>
         
-        {/* Header */}
-        <Card className="bg-black/90 border-4 border-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.5)]">
-          <CardHeader>
+        {/* Title card: 10% narrower and about 5% shorter than the menu
+            cards below it, so the wordmark stops dominating the screen. */}
+        <Card className="mx-auto w-[90%] bg-black/90 border-4 border-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.5)]">
+          <CardHeader className="px-6 py-3">
             <CardTitle className="text-center">
               <ShootrisLogo priority />
               <span className="sr-only">Shootris</span>
             </CardTitle>
             <CardDescription className="text-center text-sm sm:text-xl font-bold text-cyan-300 mt-3 sm:mt-4 tracking-wide flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
               <ChevronsUp className="h-4 w-4 sm:h-6 sm:w-6 shrink-0" aria-hidden="true" />
-              INVERTED TETRIS — PIECES RISE FROM BOTTOM
+              PIECES RISE FROM BOTTOM
               <ChevronsUp className="h-4 w-4 sm:h-6 sm:w-6 shrink-0" aria-hidden="true" />
             </CardDescription>
           </CardHeader>
@@ -129,7 +130,23 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Main Menu */}
+        {/* Menu order is the same on phone and desktop: how to play,
+            the two game modes, cards, leaderboard, settings, terms. */}
+        <Link href="/how-to-play" className="block group">
+          <Card className="bg-black/70 border-3 border-cyan-600/60 hover:border-cyan-400 transition-all cursor-pointer hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]">
+            <CardHeader>
+              <CardTitle className="text-2xl font-black text-cyan-300 tracking-wide group-hover:neon-cyan flex items-center gap-3">
+                <BookOpen className="h-7 w-7" aria-hidden="true" /> HOW TO PLAY
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-base font-semibold text-gray-300">
+                Learn the inverted mechanics and PVP strategies
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           <Link href="/single-player" className="block group">
             <Card className="h-full bg-gradient-to-br from-purple-900/70 to-black/90 border-4 border-purple-500 hover:border-purple-300 transition-all cursor-pointer hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:scale-105">
@@ -138,7 +155,7 @@ export default function Home() {
                   <Gamepad2 className="h-8 w-8" aria-hidden="true" /> SINGLE PLAYER
                 </CardTitle>
                 <CardDescription className="text-lg font-bold text-purple-200 mt-2">
-                  Classic Inverted Tetris
+                  Classic Shootris
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -167,7 +184,34 @@ export default function Home() {
               </CardContent>
             </Card>
           </Link>
+        </div>
 
+        <Card className="bg-black/70 border-3 border-yellow-500/60">
+          <CardHeader>
+            <CardTitle className="text-2xl font-black text-yellow-300 tracking-wide flex items-center gap-3">
+              <Sparkles className="h-7 w-7" aria-hidden="true" /> COLLECT THE CARDS
+            </CardTitle>
+            <CardDescription className="text-base font-semibold text-gray-300">
+              Collect all 7 cards of a set to unlock its piece skins in game. Collect all 28 to unlock every set.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <ExternalLink
+              href={SHOOTRIS_CARDS.vibeMarketUrl}
+              className="flex items-center justify-center gap-2 rounded-lg border-2 border-yellow-500 px-4 py-3 font-bold text-yellow-200 hover:bg-yellow-500/10"
+            >
+              Open packs on vibe.market <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
+            </ExternalLink>
+            <ExternalLink
+              href={SHOOTRIS_CARDS.openSeaUrl}
+              className="flex items-center justify-center gap-2 rounded-lg border-2 border-cyan-500 px-4 py-3 font-bold text-cyan-200 hover:bg-cyan-500/10"
+            >
+              Trade cards on OpenSea <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
+            </ExternalLink>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           <Link href="/leaderboard" className="block group">
             <Card className="h-full bg-gradient-to-br from-yellow-900/70 to-black/90 border-4 border-yellow-500 hover:border-yellow-300 transition-all cursor-pointer hover:shadow-[0_0_30px_rgba(250,204,21,0.6)] hover:scale-105">
               <CardHeader>
@@ -199,50 +243,6 @@ export default function Home() {
               <CardContent>
                 <p className="text-base font-semibold text-gray-300 leading-relaxed">
                   Music toggle, terms of service, and game preferences.
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-
-        {/* Card collection */}
-        <Card className="bg-black/70 border-3 border-yellow-500/60">
-          <CardHeader>
-            <CardTitle className="text-2xl font-black text-yellow-300 tracking-wide flex items-center gap-3">
-              <Sparkles className="h-7 w-7" aria-hidden="true" /> COLLECT THE CARDS
-            </CardTitle>
-            <CardDescription className="text-base font-semibold text-gray-300">
-              Collect all 7 cards of a set to unlock its piece skins in game. Collect all 28 to unlock every set.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <ExternalLink
-              href={SHOOTRIS_CARDS.vibeMarketUrl}
-              className="flex items-center justify-center gap-2 rounded-lg border-2 border-yellow-500 px-4 py-3 font-bold text-yellow-200 hover:bg-yellow-500/10"
-            >
-              Open packs on vibe.market <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
-            </ExternalLink>
-            <ExternalLink
-              href={SHOOTRIS_CARDS.openSeaUrl}
-              className="flex items-center justify-center gap-2 rounded-lg border-2 border-cyan-500 px-4 py-3 font-bold text-cyan-200 hover:bg-cyan-500/10"
-            >
-              Trade cards on OpenSea <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
-            </ExternalLink>
-          </CardContent>
-        </Card>
-
-        {/* Info Cards */}
-        <div className="grid gap-6 md:grid-cols-1">
-          <Link href="/how-to-play" className="block group">
-            <Card className="bg-black/70 border-3 border-cyan-600/60 hover:border-cyan-400 transition-all cursor-pointer hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]">
-              <CardHeader>
-                <CardTitle className="text-2xl font-black text-cyan-300 tracking-wide group-hover:neon-cyan flex items-center gap-3">
-                  <BookOpen className="h-7 w-7" aria-hidden="true" /> HOW TO PLAY
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-base font-semibold text-gray-300">
-                  Learn inverted Tetris mechanics and PVP strategies
                 </p>
               </CardContent>
             </Card>
