@@ -10,11 +10,19 @@ export default function middleware(request: NextRequest) {
   const requestId = crypto.randomUUID();
   const response = NextResponse.next();
   response.headers.set("x-request-id", requestId);
-  // Everything except the embeddable mini-game refuses to be framed. /mini
-  // sets its own frame-ancestors policy in next.config.mjs, and must not
-  // carry X-Frame-Options, which has no cross-origin allow-list.
+  // The whole app runs inside an iframe on the DESKTOP Farcaster and Base
+  // clients (phones use a native webview, which ignores frame headers), so
+  // those hosts must be allowed to frame every route, not just /mini.
+  // X-Frame-Options cannot express a cross-origin allow-list; shipping it
+  // here once left the desktop mini-app stuck on its splash screen, with
+  // the page refused before a single line of it ran. frame-ancestors is
+  // the replacement: self, the mini-app clients, and nobody else.
+  // /mini keeps its separate, wider policy from next.config.mjs.
   if (!request.nextUrl.pathname.startsWith("/mini")) {
-    response.headers.set("X-Frame-Options", "SAMEORIGIN");
+    const ancestors =
+      process.env.APP_FRAME_ANCESTORS ||
+      "'self' https://farcaster.xyz https://*.farcaster.xyz https://warpcast.com https://*.warpcast.com https://base.app https://*.base.app https://wallet.coinbase.com";
+    response.headers.set("Content-Security-Policy", `frame-ancestors ${ancestors};`);
   }
   return response;
 }
