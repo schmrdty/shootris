@@ -55,44 +55,37 @@ export function useLiveTables(connection: DbConnection | null): number {
   return version;
 }
 
-/** A single-player run counts as won once it clears its first stage. */
-export function runWon(run: Pick<GameRun, 'levelReached'>): boolean {
-  return run.levelReached > LEVELS_PER_STAGE;
-}
-
 export interface PlayerStats {
-  played: number;
-  won: number;
-  lost: number;
-  inProgress: number;
-  singlePlayer: { runs: number; stagesCleared: number; bestScore: bigint; bestLevel: number };
+  singlePlayer: {
+    runs: number;
+    totalLines: number;
+    bestLines: number;
+    stagesCleared: number;
+    bestScore: bigint;
+  };
   pvp: { played: number; won: number; lost: number };
 }
 
 /**
  * Pure: derive a wallet's record from its runs and matches.
- * - Single player: a run is won if it cleared a stage. The wallet's newest
- *   run is "in progress" while still active (the player may pay to
- *   continue); any other run is finished, since starting a new run retires
- *   the old one.
+ * - Single player is measured in lines. A run has no win or loss.
  * - PvP: only completed matches count; the winner is recorded by the server.
+ *   Cancelled matches (abandoned, or an opponent who never showed) count
+ *   for nobody.
  */
 export function computePlayerStats(wallet: string, runs: GameRun[], matches: PvpMatch[]): PlayerStats {
   const w = wallet.toLowerCase();
 
   const mine = runs.filter((r) => r.wallet.toLowerCase() === w);
-  const newestRunId = mine.reduce<bigint | null>((max, r) => (max === null || r.runId > max ? r.runId : max), null);
-  let spWon = 0;
-  let spInProgress = 0;
+  let totalLines = 0;
+  let bestLines = 0;
   let bestScore = BigInt(0);
-  let bestLevel = 0;
   let stagesCleared = 0;
   for (const r of mine) {
+    totalLines += r.linesCleared;
+    if (r.linesCleared > bestLines) bestLines = r.linesCleared;
     if (r.score > bestScore) bestScore = r.score;
-    if (r.levelReached > bestLevel) bestLevel = r.levelReached;
     stagesCleared += Math.floor((r.levelReached - 1) / LEVELS_PER_STAGE);
-    if (runWon(r)) spWon++;
-    else if (r.active && r.runId === newestRunId) spInProgress++;
   }
 
   let pvpPlayed = 0;
@@ -105,15 +98,8 @@ export function computePlayerStats(wallet: string, runs: GameRun[], matches: Pvp
     if (m.winnerWallet?.toLowerCase() === w) pvpWon++;
   }
 
-  const spRuns = mine.length;
-  const played = spRuns + pvpPlayed;
-  const won = spWon + pvpWon;
   return {
-    played,
-    won,
-    lost: Math.max(0, played - won - spInProgress),
-    inProgress: spInProgress,
-    singlePlayer: { runs: spRuns, stagesCleared, bestScore, bestLevel },
+    singlePlayer: { runs: mine.length, totalLines, bestLines, stagesCleared, bestScore },
     pvp: { played: pvpPlayed, won: pvpWon, lost: pvpPlayed - pvpWon },
   };
 }

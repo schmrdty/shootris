@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useSpacetimeDB } from '@/lib/spacetime/hooks';
-import { MATCH_TIMEOUT_LABEL, formatCountdown, useTimeout } from '@/lib/pvp';
+import { INVITE_TIMEOUT_LABEL, INVITE_TIMEOUT_MS, formatCountdown, useTimeout } from '@/lib/pvp';
 import { shareCast } from '@/lib/share';
 import { MatchType, type PvpMatch } from '@/spacetime_module_bindings';
 import MicroShootris from '@/components/MicroShootris';
@@ -25,7 +25,7 @@ export default function ScoreRacePage() {
   const [showInviteFlow, setShowInviteFlow] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [inviteCreatedAt, setInviteCreatedAt] = useState<number | null>(null);
-  const inviteLeftMs = useTimeout(inviteCreatedAt);
+  const inviteLeftMs = useTimeout(inviteCreatedAt, INVITE_TIMEOUT_MS);
   const [joinCode, setJoinCode] = useState('');
   const [inQueue, setInQueue] = useState(false);
   const [matchFound, setMatchFound] = useState(false);
@@ -157,7 +157,7 @@ export default function ScoreRacePage() {
   }, [inviteCode]);
 
   const shareOnFarcaster = useCallback(() => {
-    const text = `Join my Shootris Score Race match! Code: ${inviteCode}. The invite expires in ${MATCH_TIMEOUT_LABEL}, so jump in now.`;
+    const text = `Join my Shootris Score Race match! Code: ${inviteCode}. The invite is open for ${INVITE_TIMEOUT_LABEL}.`;
     shareCast(text);
   }, [inviteCode]);
 

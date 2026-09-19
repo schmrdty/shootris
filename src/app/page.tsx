@@ -116,7 +116,7 @@ export default function Home() {
                 </p>
                 {player && (
                   <p className="text-xl font-bold text-blue-400">
-                    GAMES: {Number(player.totalGames)} | WINS: {Number(player.totalWins)}
+                    GAMES: {Number(player.totalGames)} | PVP WINS: {Number(player.pvpWins)}
                   </p>
                 )}
               </div>

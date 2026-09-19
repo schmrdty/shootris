@@ -153,7 +153,9 @@ export default function SinglePlayerPage() {
 
   // Start a fresh run locally. The server-side run is created separately,
   // once the wallet is verified (see below).
+  const runPendingRef = useRef(false);
   const startNewRun = useCallback(() => {
+    runPendingRef.current = true;
     setGameState(spawnNewPiece(createInitialGameState()));
     setLastSnapshot(null);
     setShowContinueModal(false);
@@ -188,11 +190,15 @@ export default function SinglePlayerPage() {
   // unverified wallet, so this waits for the binding instead of firing the
   // moment the socket connects — and still fires if verification (or the
   // wallet itself) only arrives mid-game.
-  const startedForRunRef = useRef<number | null>(null);
+  //
+  // Keyed on a flag set by startNewRun rather than on runNonce: picking a
+  // mode runs startNewRun in the same commit as this effect, so the effect
+  // sees the old nonce, fires, then fires again for the new one. That sent
+  // every run to the server twice.
   useEffect(() => {
     if (mode === null || !connection || !address || !bound) return;
-    if (startedForRunRef.current === runNonce) return;
-    startedForRunRef.current = runNonce;
+    if (!runPendingRef.current) return;
+    runPendingRef.current = false;
     const emptyBoard = JSON.stringify(Array(20).fill(Array(10).fill(null)));
     connection.reducers.startSingleRun(address.toLowerCase(), emptyBoard, 1);
   }, [mode, connection, address, bound, runNonce]);

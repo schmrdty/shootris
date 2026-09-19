@@ -22,7 +22,7 @@ import { BOARD_WIDTH, BOARD_HEIGHT, OBSTACLE_BAND_HEIGHT } from '@/lib/tetris/ty
 import type { PvpMatch } from '@/spacetime_module_bindings';
 import { Trophy, Skull } from 'lucide-react';
 import { useGameTheme } from '@/lib/theme';
-import { MATCH_TIMEOUT_MS, formatCountdown, useTimeout } from '@/lib/pvp';
+import { INVITE_TIMEOUT_MS, MATCH_TIMEOUT_MS, formatCountdown, useTimeout } from '@/lib/pvp';
 import { MobileControls } from '@/components/MobileControls';
 import { useTouchControls, useBoardCellSize, CONTROL_DECK_HEIGHT } from '@/hooks/useTouchControls';
 
@@ -161,7 +161,9 @@ export default function PvpPlayPage() {
     match && match.status.tag === 'Waiting'
       ? Number(match.createdAt.microsSinceUnixEpoch / BigInt(1000))
       : null;
-  const inviteLeftMs = useTimeout(waitingSinceMs);
+  // Invite-code matches stay open for a day; public ones for five minutes
+  const inviteWindowMs = match?.joinCode ? INVITE_TIMEOUT_MS : MATCH_TIMEOUT_MS;
+  const inviteLeftMs = useTimeout(waitingSinceMs, inviteWindowMs);
   const matchCompleted = match?.status.tag === 'Completed';
   const matchCancelled = match?.status.tag === 'Cancelled';
 
@@ -238,7 +240,10 @@ export default function PvpPlayPage() {
     [connection, matchId, sendBoardUpdate]
   );
 
-  // Floor duel: touch the far wall (top row) to win; top out and you lose
+  // Floor duel: touch the far wall (top row) to win; top out and you lose.
+  // The server overrides the claim when a player is missing: topping out
+  // against an opponent who left is a win, and one who never showed up
+  // cancels the match.
   useEffect(() => {
     if (!isFloorDuel || !initialized || matchCompleted || !myWallet || !opponentWallet) return;
     const reachedFloor = gameState.board[BOARD_HEIGHT - 1].some((cell) => cell !== null);
@@ -413,7 +418,7 @@ export default function PvpPlayPage() {
           <p className={`mb-4 text-sm font-bold ${inviteLeftMs === 0 ? 'text-red-400' : 'text-cyan-300'}`}>
             {inviteLeftMs === 0
               ? 'Invite expired. The match was cancelled'
-              : `Invite expires in ${formatCountdown(inviteLeftMs ?? MATCH_TIMEOUT_MS)}`}
+              : `Invite expires in ${formatCountdown(inviteLeftMs ?? inviteWindowMs)}`}
           </p>
           <Button onClick={() => router.push('/pvp')} variant="outline">
             Back to PvP
@@ -509,7 +514,9 @@ export default function PvpPlayPage() {
                 opponentIdleLeftMs !== null &&
                 opponentIdleLeftMs < MATCH_TIMEOUT_MS - 60_000 && (
                   <p className="mt-3 text-center text-sm font-bold text-yellow-400">
-                    Opponent idle. You win in {formatCountdown(opponentIdleLeftMs)} if they stay away
+                    {opponentInfo.board
+                      ? `Opponent idle. You win in ${formatCountdown(opponentIdleLeftMs)} if they stay away`
+                      : `Opponent has not shown up. The match is cancelled in ${formatCountdown(opponentIdleLeftMs)} if they don't`}
                   </p>
                 )}
               {gameState.gameOver && !matchCompleted && (
@@ -615,7 +622,7 @@ export default function PvpPlayPage() {
             </DialogTitle>
             <DialogDescription className="text-center text-gray-300">
               {matchCancelled
-                ? 'This match was cancelled.'
+                ? 'This match was cancelled, so it counts for neither player.'
                 : `Final score. You: ${isP1 ? Number(match.player1Score) : Number(match.player2Score)} | Opponent: ${Number(opponentScore)}`}
             </DialogDescription>
           </DialogHeader>

@@ -183,24 +183,36 @@ export default function SettingsPage() {
                 <p className="font-mono text-xs text-gray-500 break-all">{address}</p>
                 {stats ? (
                   <div className="mt-4 pt-4 border-t border-gray-700 space-y-4">
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded border border-gray-800 p-2">
-                        <p className="text-2xl font-bold text-white">{stats.played}</p>
-                        <p className="text-xs text-gray-400">Played</p>
-                      </div>
-                      <div className="rounded border border-gray-800 p-2">
-                        <p className="text-2xl font-bold text-green-400">{stats.won}</p>
-                        <p className="text-xs text-gray-400">Won</p>
-                      </div>
-                      <div className="rounded border border-gray-800 p-2">
-                        <p className="text-2xl font-bold text-red-400">{stats.lost}</p>
-                        <p className="text-xs text-gray-400">Lost</p>
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 mb-2">PvP</p>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded border border-gray-800 p-2">
+                          <p className="text-2xl font-bold text-white">{stats.pvp.played}</p>
+                          <p className="text-xs text-gray-400">Played</p>
+                        </div>
+                        <div className="rounded border border-gray-800 p-2">
+                          <p className="text-2xl font-bold text-green-400">{stats.pvp.won}</p>
+                          <p className="text-xs text-gray-400">Won</p>
+                        </div>
+                        <div className="rounded border border-gray-800 p-2">
+                          <p className="text-2xl font-bold text-red-400">{stats.pvp.lost}</p>
+                          <p className="text-xs text-gray-400">Lost</p>
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm">
+                      <p className="text-xs font-bold text-gray-400">Single player</p>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Single-player runs</span>
+                        <span className="text-gray-400">Runs</span>
                         <span className="text-white font-bold">{stats.singlePlayer.runs}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Lines cleared</span>
+                        <span className="text-white font-bold">{stats.singlePlayer.totalLines.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Most lines in a run</span>
+                        <span className="text-green-400 font-bold">{stats.singlePlayer.bestLines}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">Stages cleared</span>
@@ -210,18 +222,9 @@ export default function SettingsPage() {
                         <span className="text-gray-400">Best score</span>
                         <span className="text-cyan-400 font-bold">{stats.singlePlayer.bestScore.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">PvP won / lost</span>
-                        <span className="font-bold">
-                          <span className="text-green-400">{stats.pvp.won}</span>
-                          <span className="text-gray-500"> / </span>
-                          <span className="text-red-400">{stats.pvp.lost}</span>
-                        </span>
-                      </div>
                     </div>
                     <p className="text-xs text-gray-500">
-                      A single-player run counts as a win once it clears a stage (10 levels).
-                      {stats.inProgress > 0 && ' Your latest run is still open, so it is not counted as a loss yet.'}
+                      Single-player runs are measured in lines, not wins. Wins and losses come from PvP.
                     </p>
                   </div>
                 ) : (
