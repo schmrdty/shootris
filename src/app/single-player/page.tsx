@@ -375,7 +375,7 @@ export default function SinglePlayerPage() {
   }, [touch, mode, halted, gameState.gameOver, pause]);
 
   const handlePayAndContinue = useCallback(async () => {
-    if (!address || !lastSnapshot || payingRef.current) return;
+    if (!address || !lastSnapshot || payingRef.current || !MYU_CONFIGURED) return;
     payingRef.current = true;
     setPaying(true);
 
@@ -821,7 +821,15 @@ export default function SinglePlayerPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            {address ? (
+            {address && !MYU_CONFIGURED ? (
+              // The token and payout addresses are baked into the bundle at
+              // build time. If they are missing, say so: silently dropping
+              // the Pay button once left players staring at an offer with no
+              // way to take it.
+              <p className="text-center text-yellow-400">
+                $MYU continues are unavailable right now. Your score is still saved.
+              </p>
+            ) : address ? (
               <p className="text-center text-white">
                 Continue from just before you failed for <span className="text-green-400 font-bold">{Number(CONTINUE_PRICE_MYU).toLocaleString()} $MYU</span> on Base?
               </p>
@@ -835,15 +843,21 @@ export default function SinglePlayerPage() {
                 </div>
               </div>
             )}
-            {address && MYU_CONFIGURED && myuBalance !== undefined && (
+            {address && MYU_CONFIGURED && (
               <p className="text-center text-sm text-gray-300">
-                Your balance: <span className={hasEnoughMyu ? 'text-cyan-400 font-bold' : 'text-red-400 font-bold'}>
-                  {Number(myuBalance) / 10 ** MYU_DECIMALS} $MYU
-                </span>
+                {myuBalance === undefined ? (
+                  'Checking your $MYU balance…'
+                ) : (
+                  <>
+                    Your balance: <span className={hasEnoughMyu ? 'text-cyan-400 font-bold' : 'text-red-400 font-bold'}>
+                      {Number(myuBalance) / 10 ** MYU_DECIMALS} $MYU
+                    </span>
+                  </>
+                )}
               </p>
             )}
             {/* Not enough MYU? Swap for it right here in the modal */}
-            {address && MYU_CONFIGURED && !hasEnoughMyu && (
+            {address && MYU_CONFIGURED && myuBalance !== undefined && !hasEnoughMyu && (
               <div className="rounded-lg border border-cyan-500/40 p-2">
                 <p className="text-center text-sm text-yellow-400 mb-1">
                   Not enough $MYU. Swap for it right here:
@@ -869,7 +883,9 @@ export default function SinglePlayerPage() {
             <Button variant="outline" onClick={startNewRun} disabled={paying} className="w-full sm:w-auto border-purple-500 text-purple-400">
               New Game
             </Button>
-            {address && (hasEnoughMyu || paying) && (
+            {/* An unread balance still offers the button: a flaky RPC read
+                should not look like the continue was withdrawn. */}
+            {address && MYU_CONFIGURED && (hasEnoughMyu || paying || myuBalance === undefined) && (
               <Button onClick={handlePayAndContinue} disabled={paying} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
                 {paying ? 'Confirm in your wallet…' : `Pay ${Number(CONTINUE_PRICE_MYU).toLocaleString()} $MYU & Continue`}
               </Button>

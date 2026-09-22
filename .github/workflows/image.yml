@@ -48,6 +48,24 @@ jobs:
           dropped=$(printf '%s\n' "$NEXT_PUBLIC_ENV" | tr -d '\r' | grep -vcE '^(NEXT_PUBLIC_[A-Z0-9_]+=|#|\s*$)' || true)
           [ "$dropped" -gt 0 ] && echo "::warning::Ignored $dropped non-NEXT_PUBLIC line(s) in NEXT_PUBLIC_ENV"
           echo "Public vars baked in: $(cut -d= -f1 .env.production | tr '\n' ' ')"
+          # These are baked into the browser bundle and cannot be fixed by a
+          # server restart. Missing ones ship a build where continues are
+          # dead and the wallet QR is blank, with nothing in any log to say
+          # so, so refuse to build instead. The secret is replaced whole:
+          # editing it has dropped lines before.
+          missing=''
+          for required in \
+            NEXT_PUBLIC_MYU_TOKEN_ADDRESS \
+            NEXT_PUBLIC_PAYOUT_SPLIT_ADDRESS \
+            NEXT_PUBLIC_ONCHAINKIT_API_KEY \
+            NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+          do
+            grep -qE "^${required}=.+" .env.production || missing="$missing $required"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::NEXT_PUBLIC_ENV is missing:$missing . Add every NEXT_PUBLIC_* line from the server .env.local to the secret (it is replaced whole, not merged)."
+            exit 1
+          fi
 
       - uses: docker/setup-buildx-action@v3
 
