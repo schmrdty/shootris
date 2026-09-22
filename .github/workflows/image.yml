@@ -42,11 +42,23 @@ jobs:
             echo "::error::Add the NEXT_PUBLIC_ENV repository secret (see top of this file)"
             exit 1
           fi
+          # Tolerate how the secret was pasted: leading whitespace, an
+          # "export " prefix, or the whole line wrapped in quotes. A strict
+          # match once silently produced an empty file, which shipped a
+          # bundle with no public values at all.
+          printf '%s\n' "$NEXT_PUBLIC_ENV" | tr -d '\r' \
+            | sed -E "s/^[[:space:]]+//; s/^export[[:space:]]+//; s/^'(NEXT_PUBLIC_.*)'$/\1/; s/^\"(NEXT_PUBLIC_.*)\"$/\1/" \
+            > .env.normalized
           # Only NEXT_PUBLIC_* lines are kept, so a pasted server secret can
           # never end up inside the image
-          printf '%s\n' "$NEXT_PUBLIC_ENV" | tr -d '\r' | grep -E '^NEXT_PUBLIC_[A-Z0-9_]+=' > .env.production || true
-          dropped=$(printf '%s\n' "$NEXT_PUBLIC_ENV" | tr -d '\r' | grep -vcE '^(NEXT_PUBLIC_[A-Z0-9_]+=|#|\s*$)' || true)
-          [ "$dropped" -gt 0 ] && echo "::warning::Ignored $dropped non-NEXT_PUBLIC line(s) in NEXT_PUBLIC_ENV"
+          grep -E '^NEXT_PUBLIC_[A-Z0-9_]+=' .env.normalized > .env.production || true
+          dropped=$(grep -vcE '^(NEXT_PUBLIC_[A-Z0-9_]+=|#|\s*$)' .env.normalized || true)
+          # An if, not "[ ... ] && echo": steps run under bash -e, where a
+          # false test as a bare command ends the step.
+          if [ "$dropped" -gt 0 ]; then
+            echo "::warning::Ignored $dropped non-NEXT_PUBLIC line(s) in NEXT_PUBLIC_ENV"
+          fi
+          rm -f .env.normalized
           echo "Public vars baked in: $(cut -d= -f1 .env.production | tr '\n' ' ')"
           # These are baked into the browser bundle and cannot be fixed by a
           # server restart. Missing ones ship a build where continues are
