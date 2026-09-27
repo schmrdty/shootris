@@ -14,7 +14,8 @@ import MicroShootris from '@/components/MicroShootris';
 import { Copy, Share2, Target, BrickWall, Rocket, Sparkles, Skull } from 'lucide-react';
 import { useMyuFee } from '@/hooks/useMyuFee';
 import { GetMyuDialog } from '@/components/GetMyuDialog';
-import { PVP_ENTRY_FEE_MYU, MYU_DECIMALS } from '@/app/config/onchainkit';
+import { PVP_ENTRY_FEE_MYU } from '@/app/config/onchainkit';
+import { formatMyu } from '@/lib/myu';
 
 export default function FloorDuelPage() {
   const router = useRouter();
@@ -206,7 +207,7 @@ export default function FloorDuelPage() {
               Entry fee: {PVP_ENTRY_FEE_MYU} $MYU per match or queue entry (non-refundable)
             </p>
             <p className="text-sm text-gray-300 mt-1">
-              Your balance: {myuBalance !== undefined ? Number(myuBalance) / 10 ** MYU_DECIMALS : '…'} $MYU
+              Your balance: {myuBalance !== undefined ? formatMyu(myuBalance) : '…'} $MYU
               {!hasEnough && <span className="text-red-400 ml-2">(not enough; you can swap for $MYU in-app)</span>}
             </p>
           </Card>

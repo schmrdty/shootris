@@ -26,6 +26,7 @@ import { Swap, SwapAmountInput, SwapToggleButton, SwapButton, SwapMessage, SwapT
 import { MYU_TOKEN, SWAP_FROM_TOKENS } from '@/app/config/onchainkit';
 import { Infinity as InfinityIcon, Map as MapIcon, Award, Pause, Play } from 'lucide-react';
 import { StageBreakCard, type StageBreak } from '@/components/StageBreakCard';
+import { formatMyu } from '@/lib/myu';
 
 type PlayMode = 'free' | 'journey';
 
@@ -868,7 +869,7 @@ export default function SinglePlayerPage() {
                 ) : (
                   <>
                     Your balance: <span className={hasEnoughMyu ? 'text-cyan-400 font-bold' : 'text-red-400 font-bold'}>
-                      {Number(myuBalance) / 10 ** MYU_DECIMALS} $MYU
+                      {formatMyu(myuBalance)} $MYU
                     </span>
                   </>
                 )}
