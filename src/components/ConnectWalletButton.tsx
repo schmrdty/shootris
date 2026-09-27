@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
 import { walletConnect } from 'wagmi/connectors';
 import { SITE_URL } from '@/lib/share';
-import { Avatar, Name } from '@coinbase/onchainkit/identity';
+import { Avatar } from '@coinbase/onchainkit/identity';
+import { PlayerName } from '@/components/PlayerName';
 import { base } from 'wagmi/chains';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -101,7 +102,8 @@ export function ConnectWalletButton({ className = '', label = 'Connect Wallet' }
         {address ? (
           <span className="flex items-center gap-2">
             <Avatar address={address} chain={base} className="h-6 w-6" />
-            <Name address={address} chain={base} className="font-bold" />
+            {/* Our own lookup, resolved and cached server-side */}
+            <PlayerName wallet={address} className="font-bold" />
           </span>
         ) : (
           label

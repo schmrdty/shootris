@@ -9,6 +9,20 @@
         "set NODE_EXTRA_CA_CERTS=C:\\ProgramData\\Avast Software\\Avast\\wscert.pem&& npx next dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "shootris-prod",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "next",
+        "start",
+        "-p",
+        "3100"
+      ],
+      "env": {
+        "NODE_EXTRA_CA_CERTS": "C:\\ProgramData\\Avast Software\\Avast\\wscert.pem"
+      },
+      "port": 3100
     }
   ]
 }

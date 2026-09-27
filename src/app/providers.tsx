@@ -48,19 +48,32 @@ const wagmiConfig = createConfig({
   transports: {
     [base.id]: http(),
   },
-  ssr: false,
+  // Must stay true on the App Router. With ssr:false wagmi runs its
+  // reconnect from the render body rather than an effect, so every client
+  // navigation reconnected the wallet again: a connected player's log filled
+  // with reconnecting/connected pairs, and the wallet briefly dropped each
+  // time. With ssr:true that work happens once, in a mount effect.
+  ssr: true,
 });
 
-// ENS names on the leaderboard resolve in the browser against Ethereum
-// mainnet. viem's default mainnet RPC rejects browser (CORS) requests, so
-// hand OnchainKit one that allows them. Must be a PUBLIC endpoint — anything
-// set here ships to every visitor, so never put a keyed RPC URL in it.
-const publicClients = {
-  [mainnet.id]: createPublicClient({
-    chain: mainnet,
-    transport: http(process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://eth.drpc.org'),
-  }),
-};
+// OnchainKit looks names and avatars up on Ethereum mainnet. Those calls
+// used to go from each player's browser straight to a public RPC, which
+// rejected eth_call (so nothing ever resolved) and produced enough
+// crypto-flavoured traffic for a player's ISP to flag it. They now go
+// through /api/rpc/ethereum on this server, which allows read methods only
+// and keeps any keyed RPC URL private. Our own name lookups use /api/name.
+//
+// Browser only: the relative URL has no meaning on the server, where these
+// client-side components never run anyway.
+const publicClients =
+  typeof window === 'undefined'
+    ? undefined
+    : {
+        [mainnet.id]: createPublicClient({
+          chain: mainnet,
+          transport: http('/api/rpc/ethereum'),
+        }),
+      };
 
 // Record every wallet state change, so a drop can be diagnosed on the
 // device it happened on (any page with ?debug=1).
