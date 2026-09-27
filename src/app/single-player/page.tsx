@@ -36,6 +36,9 @@ const JOURNEY_MIN_TIME = 45;
 const levelTimeBudget = (level: number) =>
   Math.max(JOURNEY_MIN_TIME, JOURNEY_BASE_TIME - 3 * (level - 1));
 
+// A stray shoot press must not answer the game over dialog for the player
+const KEY_GRACE_MS = 700;
+
 export default function SinglePlayerPage() {
   const router = useRouter();
   const { address, chainId } = useAccount();
@@ -153,6 +156,7 @@ export default function SinglePlayerPage() {
 
   // Start a fresh run locally. The server-side run is created separately,
   // once the wallet is verified (see below).
+  const modalOpenedAt = useRef(0);
   const runPendingRef = useRef(false);
   const startNewRun = useCallback(() => {
     runPendingRef.current = true;
@@ -253,6 +257,7 @@ export default function SinglePlayerPage() {
   useEffect(() => {
     if (!gameState.gameOver || showContinueModal) return;
     setLastSnapshot(createBoardSnapshot(gameState));
+    modalOpenedAt.current = Date.now();
     setShowContinueModal(true);
     // Persist the score now so it counts even if the player just leaves
     if (connection && runId) {
@@ -813,7 +818,20 @@ export default function SinglePlayerPage() {
           if (!payingRef.current) setShowContinueModal(open);
         }}
       >
-        <DialogContent className="bg-gray-900 border-purple-500 max-h-[85vh] overflow-y-auto">
+        <DialogContent
+          className="bg-gray-900 border-purple-500 max-h-[85vh] overflow-y-auto"
+          // Shoot is the space bar, so a player who tops out mid-press was
+          // pressing it as this opened: the focused button fired and the run
+          // was quit before the continue offer could be read. Take no focus,
+          // and ignore space and Enter until the player has had a moment.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onKeyDown={(e) => {
+            if ((e.key === ' ' || e.key === 'Enter') && Date.now() - modalOpenedAt.current < KEY_GRACE_MS) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-2xl text-purple-400">Game Over!</DialogTitle>
             <DialogDescription className="text-gray-300">

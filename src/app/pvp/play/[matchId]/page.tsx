@@ -609,7 +609,13 @@ export default function PvpPlayPage() {
 
       {/* Result overlay */}
       <Dialog open={matchCompleted || matchCancelled}>
-        <DialogContent className="bg-gray-900 border-purple-500" onInteractOutside={(e) => e.preventDefault()}>
+        {/* Shoot is the space bar: taking focus here let a stray press
+            answer the result dialog the instant the match ended. */}
+        <DialogContent
+          className="bg-gray-900 border-purple-500"
+          onInteractOutside={(e) => e.preventDefault()}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className={`text-3xl text-center flex items-center justify-center gap-3 ${matchCancelled ? 'text-gray-400' : iWon ? 'text-green-400' : 'text-red-400'}`}>
               {matchCancelled ? (

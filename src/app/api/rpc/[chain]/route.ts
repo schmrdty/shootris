@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getChainRegistry } from '@/lib/chains';
 
-// Read-only Ethereum mainnet RPC, proxied through this server.
+// Read-only RPC for Base and Ethereum, proxied through this server.
 //
-// OnchainKit does its own mainnet lookups (the name and avatar in the wallet
-// modal). Pointed straight at a public RPC those run from each player's
-// device; one player's ISP flagged the traffic. Sending them here keeps the
-// browser talking only to this domain, and keeps any keyed RPC URL private.
+// The browser needs chain reads the wallet does not provide: the player's
+// $MYU balance on Base, and the name and avatar OnchainKit looks up on
+// Ethereum. Pointed straight at public RPCs those run from each player's
+// device, which is what one player's ISP flagged. Sending them here keeps
+// the browser talking only to this domain and keeps keyed RPC URLs private.
+// Sending a transaction still goes through the player's own wallet.
 //
 // Deliberately narrow: read methods only, no transactions, no filters, no
 // arbitrary passthrough. Anything not listed is refused.
@@ -33,7 +35,14 @@ function refusal(method: unknown, id: unknown) {
   };
 }
 
-export async function POST(request: Request) {
+const PROXIED_CHAINS = new Set(['base', 'ethereum']);
+
+export async function POST(request: Request, context: { params: Promise<{ chain: string }> }) {
+  const { chain } = await context.params;
+  if (!PROXIED_CHAINS.has(chain)) {
+    return NextResponse.json({ error: 'Unknown chain' }, { status: 404 });
+  }
+
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) {
     return NextResponse.json({ error: 'Request too large' }, { status: 413 });
@@ -57,7 +66,7 @@ export async function POST(request: Request) {
     return NextResponse.json(Array.isArray(body) ? [error] : error, { status: 200 });
   }
 
-  const { rpcUrl } = getChainRegistry().ethereum as { rpcUrl: string };
+  const { rpcUrl } = getChainRegistry()[chain] as { rpcUrl: string };
   try {
     const upstream = await fetch(rpcUrl, {
       method: 'POST',

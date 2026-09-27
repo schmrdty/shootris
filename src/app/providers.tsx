@@ -46,7 +46,10 @@ const wagmiConfig = createConfig({
     injected(),
   ],
   transports: {
-    [base.id]: http(),
+    // Chain reads (the player's $MYU balance) go through this server rather
+    // than from the browser to a public Base RPC. Sending a transaction is
+    // unaffected: that goes through the player's own wallet.
+    [base.id]: http(typeof window === 'undefined' ? undefined : '/api/rpc/base'),
   },
   // Must stay true on the App Router. With ssr:false wagmi runs its
   // reconnect from the render body rather than an effect, so every client
@@ -72,6 +75,10 @@ const publicClients =
         [mainnet.id]: createPublicClient({
           chain: mainnet,
           transport: http('/api/rpc/ethereum'),
+        }),
+        [base.id]: createPublicClient({
+          chain: base,
+          transport: http('/api/rpc/base'),
         }),
       };
 
