@@ -3,11 +3,9 @@
 // Blank entries are simply not rendered, so a link can be added here
 // without touching the pages that show them.
 
-/** Ryan's X profile, e.g. https://x.com/<handle> */
-export const X_PROFILE_URL = '';
+export const X_PROFILE_URL = 'https://x.com/schmidtiest';
 
-/** Ryan's Farcaster profile, e.g. https://farcaster.xyz/<handle> */
-export const FARCASTER_PROFILE_URL = '';
+export const FARCASTER_PROFILE_URL = 'https://farcaster.xyz/schmidtiest.eth';
 
 /**
  * The public standings, as JSON. The SpacetimeDB dashboard is not public
