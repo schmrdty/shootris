@@ -10,7 +10,9 @@ import { useAccount } from 'wagmi';
 import type { PvpLeaderboard } from '@/spacetime_module_bindings';
 import { computeSpLeaderboard, useLiveTables, type SpLeaderRow } from '@/lib/spacetime/stats';
 import { PlayerName } from '@/components/PlayerName';
-import { Medal } from 'lucide-react';
+import { ExternalLink } from '@/components/ExternalLink';
+import { X_PROFILE_URL, FARCASTER_PROFILE_URL, LEADERBOARD_API_PATH } from '@/app/config/links';
+import { Medal, Database } from 'lucide-react';
 
 const TOP_N = 20;
 
@@ -202,6 +204,30 @@ export default function LeaderboardPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Where the board comes from, and where to find us */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm">
+          <ExternalLink
+            href={LEADERBOARD_API_PATH}
+            className="flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 underline-offset-4 hover:underline"
+          >
+            <Database className="h-4 w-4" aria-hidden="true" />
+            Standings as data
+          </ExternalLink>
+          {X_PROFILE_URL && (
+            <ExternalLink href={X_PROFILE_URL} className="text-gray-400 hover:text-white underline-offset-4 hover:underline">
+              Follow on X
+            </ExternalLink>
+          )}
+          {FARCASTER_PROFILE_URL && (
+            <ExternalLink
+              href={FARCASTER_PROFILE_URL}
+              className="text-purple-300 hover:text-purple-200 underline-offset-4 hover:underline"
+            >
+              Follow on Farcaster
+            </ExternalLink>
+          )}
+        </div>
       </div>
     </div>
   );
