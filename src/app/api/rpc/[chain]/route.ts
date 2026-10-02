@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getChainRegistry } from '@/lib/chains';
+import { isSameOrigin, withinRateLimit } from '@/lib/requestGuard';
 
 // Read-only RPC for Base and Ethereum, proxied through this server.
 //
@@ -22,6 +23,8 @@ const ALLOWED_METHODS = new Set([
   'net_version',
 ]);
 
+// A game page reads a balance now and then; this is far above that
+const RPC_REQUESTS_PER_MINUTE = 60;
 const MAX_BODY_BYTES = 128 * 1024;
 const MAX_BATCH = 20;
 
@@ -41,6 +44,16 @@ export async function POST(request: Request, context: { params: Promise<{ chain:
   const { chain } = await context.params;
   if (!PROXIED_CHAINS.has(chain)) {
     return NextResponse.json({ error: 'Unknown chain' }, { status: 404 });
+  }
+
+  // This endpoint exists for our own pages. Left open it is a free RPC
+  // relay for anyone who finds it, spending our provider quota and our
+  // host's bandwidth.
+  if (!isSameOrigin(request)) {
+    return NextResponse.json({ error: 'Not available to third parties' }, { status: 403 });
+  }
+  if (!withinRateLimit(request, 'rpc', RPC_REQUESTS_PER_MINUTE)) {
+    return NextResponse.json({ error: 'Slow down' }, { status: 429 });
   }
 
   const raw = await request.text();

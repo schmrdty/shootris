@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createPublicClient, http, isAddress, namehash, parseAbi } from 'viem';
 import { base, mainnet } from 'viem/chains';
 import { getChainRegistry } from '@/lib/chains';
+import { withinRateLimit } from '@/lib/requestGuard';
 
 // Resolves a wallet's Basename (or ENS name) SERVER-SIDE.
 //
@@ -91,9 +92,17 @@ async function resolveEns(address: `0x${string}`): Promise<string | null> {
   return client('ethereum').getEnsName({ address });
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ address: string }> }) {
+// A leaderboard page asks for one name per row, once
+const NAME_REQUESTS_PER_MINUTE = 120;
+
+export async function GET(request: Request, context: { params: Promise<{ address: string }> }) {
+  // Cached names are free, but an unknown address costs an upstream call,
+  // and the set of possible addresses is endless.
+  if (!withinRateLimit(request, 'name', NAME_REQUESTS_PER_MINUTE)) {
+    return NextResponse.json({ error: 'Slow down' }, { status: 429 });
+  }
   const { address: raw } = await context.params;
-  if (!isAddress(raw)) {
+  if (!isAddress(raw, { strict: false })) {
     return NextResponse.json({ error: 'Not a wallet address' }, { status: 400 });
   }
   const address = raw.toLowerCase() as `0x${string}`;
