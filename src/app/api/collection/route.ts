@@ -2,13 +2,21 @@ import { NextResponse } from 'next/server';
 import { createPublicClient, http, isAddress, parseAbi, parseAbiItem } from 'viem';
 import { getChainRegistry, isChainConfigured } from '@/lib/chains';
 import { parseCardToSkin, type OwnedCard } from '@/lib/skins';
-import { SHOOTRIS_CARDS } from '@/app/config/onchainkit';
+import { SHOOTRIS_CARDS, COLLECTION_CHAIN, COLLECTION_CONTRACT } from '@/app/config/onchainkit';
+import { isSafePublicUrl } from '@/lib/safeUrl';
+import { isSameOrigin, withinRateLimit } from '@/lib/requestGuard';
 
 // Lists the Shootris cards a wallet holds and maps them to piece skins.
 // Works against an UNMODIFIED third-party collection (vibe.market): it only
 // uses standard ERC-721 reads plus vibe's optional rarity getter.
 //
 // POST { chain, contract, address } -> { cards: OwnedCard[] }
+//
+// Only the configured collection, and only for our own pages. This route
+// calls the contract's tokenURI and then fetches whatever URL comes back, so
+// accepting any contract let anyone point this server at a URL of their
+// choosing: a malware sinkhole, for instance, which is exactly what gets a
+// host's IP onto Spamhaus XBL.
 //
 // NOTE: vibe.market token ids can exceed JS's safe integer range, so ids are
 // handled as bigint internally and returned as strings.
@@ -39,12 +47,25 @@ async function fetchMetadata(uri: string): Promise<{ name?: string; image?: stri
       : decodeURIComponent(payload);
     return JSON.parse(json);
   }
-  const res = await fetch(resolveUri(uri), { signal: AbortSignal.timeout(8000) });
+  const url = resolveUri(uri);
+  // Belt and braces: even the real collection's metadata only goes out over
+  // public HTTPS by hostname.
+  if (!isSafePublicUrl(url)) throw new Error('metadata URL refused');
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000), redirect: 'error' });
   if (!res.ok) throw new Error(`metadata ${res.status}`);
   return res.json();
 }
 
+// One wallet's card check per page load; well above that is not a player
+const COLLECTION_REQUESTS_PER_MINUTE = 20;
+
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Not available to third parties' }, { status: 403 });
+  }
+  if (!withinRateLimit(req, 'collection', COLLECTION_REQUESTS_PER_MINUTE)) {
+    return NextResponse.json({ error: 'Slow down' }, { status: 429 });
+  }
   try {
     const body = await req.json();
     const chainKey = typeof body.chain === 'string' ? body.chain : '';
@@ -54,6 +75,12 @@ export async function POST(req: Request) {
     if (!contract) {
       // Collection not configured yet — not an error, just nothing to unlock
       return NextResponse.json({ cards: [], configured: false });
+    }
+    if (
+      contract.toLowerCase() !== COLLECTION_CONTRACT.toLowerCase() ||
+      chainKey !== COLLECTION_CHAIN
+    ) {
+      return NextResponse.json({ error: 'Only the Shootris collection is supported' }, { status: 400 });
     }
     const registry = getChainRegistry();
     const entry = registry[chainKey];

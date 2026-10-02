@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http, isAddress, erc721Abi } from 'viem';
 import { getChainRegistry, isChainConfigured } from '@/lib/chains';
+import { isSameOrigin, withinRateLimit } from '@/lib/requestGuard';
 
 // Cross-chain NFT/token holdings check, server-side so RPC endpoints stay
 // private and results are authoritative for gating decisions.
@@ -25,7 +26,16 @@ const erc1155BalanceAbi = [
   },
 ] as const;
 
+// Each call costs an RPC read against whatever contract is named
+const HOLDINGS_REQUESTS_PER_MINUTE = 30;
+
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Not available to third parties' }, { status: 403 });
+  }
+  if (!withinRateLimit(req, 'holdings', HOLDINGS_REQUESTS_PER_MINUTE)) {
+    return NextResponse.json({ error: 'Slow down' }, { status: 429 });
+  }
   try {
     const body = await req.json();
     const chainKey = typeof body.chain === 'string' ? body.chain : '';

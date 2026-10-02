@@ -58,6 +58,9 @@ function client(chainKey: 'base' | 'ethereum') {
   return createPublicClient({
     chain: chainKey === 'base' ? base : mainnet,
     transport: http(entry.rpcUrl),
+    // No offchain (CCIP-read) lookups: they let whoever owns a name choose a
+    // gateway URL for this server to fetch. Basenames resolve onchain anyway.
+    ccipRead: false,
   });
 }
 
@@ -114,20 +117,29 @@ export async function GET(request: Request, context: { params: Promise<{ address
     });
   }
 
+  // Only a real answer is cached. A lookup that failed (the provider timed
+  // out or rate limited us) says nothing about the wallet, and caching it as
+  // "no name" would blank that player's name for the whole negative TTL.
   let name: string | null = null;
+  let failed = false;
   try {
     name = await resolveBasename(address);
   } catch (error) {
-    // No reverse record, or Base is unreachable: fall through to ENS
-    console.warn('[name] Base lookup failed:', error instanceof Error ? error.message : error);
+    failed = true;
+    console.warn('[name] Base lookup failed:', error instanceof Error ? error.message.split('\n')[0] : error);
   }
   if (!name) {
     try {
       name = await resolveEns(address);
     } catch (error) {
-      // Leave it unnamed; the client shows a short address
-      console.warn('[name] ENS lookup failed:', error instanceof Error ? error.message : error);
+      failed = true;
+      console.warn('[name] ENS lookup failed:', error instanceof Error ? error.message.split('\n')[0] : error);
     }
+  }
+
+  if (!name && failed) {
+    // Unknown, not "unnamed": let the next request try again
+    return NextResponse.json({ name: null }, { headers: { 'Cache-Control': 'no-store', 'X-Name-Cache': 'error' } });
   }
 
   remember(address, name);

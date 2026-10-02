@@ -51,7 +51,8 @@ async function lookupProfile(fid: number): Promise<Profile> {
     if (address && isAddress(address)) {
       profile.primaryAddress = address;
       if (!profile.username) {
-        const eth = createPublicClient({ chain: mainnet, transport: http(getChainRegistry().ethereum.rpcUrl) });
+        // No offchain lookups: they let a name's owner choose a URL for us to fetch
+        const eth = createPublicClient({ chain: mainnet, transport: http(getChainRegistry().ethereum.rpcUrl), ccipRead: false });
         profile.ensName = (await eth.getEnsName({ address })) ?? undefined;
       }
     }

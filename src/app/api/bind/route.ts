@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { getChainRegistry } from '@/lib/chains';
+import { isSameOrigin, withinRateLimit } from '@/lib/requestGuard';
 
 // Verifies that the caller's wallet signed a binding message for their
 // SpacetimeDB identity, then attests the binding into the module via the
@@ -13,7 +14,16 @@ import { getChainRegistry } from '@/lib/chains';
 
 const SPACETIME_HTTP_HOST = 'https://maincloud.spacetimedb.com';
 
+// A player verifies once per device; retries stay well under this
+const BIND_REQUESTS_PER_MINUTE = 10;
+
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Not available to third parties' }, { status: 403 });
+  }
+  if (!withinRateLimit(req, 'bind', BIND_REQUESTS_PER_MINUTE)) {
+    return NextResponse.json({ error: 'Slow down' }, { status: 429 });
+  }
   try {
     const body = await req.json();
     const wallet = typeof body.wallet === 'string' ? body.wallet.toLowerCase() : '';

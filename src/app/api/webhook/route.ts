@@ -2,12 +2,20 @@ import { NextResponse } from 'next/server';
 import { parseWebhookEvent } from '@farcaster/miniapp-node';
 import { verifyAppKey } from '@/lib/farcaster/verifyAppKey';
 import { removeToken, saveToken } from '@/lib/farcaster/notificationStore';
+import { withinRateLimit } from '@/lib/requestGuard';
 
 // Farcaster / Base App mini-app webhook (manifest "webhookUrl").
 // Clients POST a signed event when a user adds or removes Shootris or
 // toggles its notifications. The signature is verified before anything is
 // stored.
+// Farcaster calls this from its own servers, so no same-origin check; each
+// call does verify a signature against an RPC, so it is still rate limited.
+const WEBHOOK_REQUESTS_PER_MINUTE = 60;
+
 export async function POST(req: Request) {
+  if (!withinRateLimit(req, 'webhook', WEBHOOK_REQUESTS_PER_MINUTE)) {
+    return NextResponse.json({ error: 'Slow down' }, { status: 429 });
+  }
   let body: unknown;
   try {
     body = await req.json();
