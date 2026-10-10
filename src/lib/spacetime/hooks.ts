@@ -24,6 +24,10 @@ const BINDING_STORAGE_KEY = 'shootris_wallet_binding';
 const TOKEN_STORAGE_KEY = 'shootris_spacetimedb_token';
 const MAX_RETRY_DELAY_MS = 30_000;
 
+// Bindings the server has confirmed during this tab's life, so the check
+// runs once per visit rather than on every page change
+const confirmedThisTab = new Set<string>();
+
 function bindingMemo(wallet: string, identityHex: string): string {
   return `${wallet.toLowerCase()}:${identityHex}`;
 }
@@ -265,8 +269,34 @@ export function useSpacetimeDB(wallet: string | null) {
     const w = wallet.toLowerCase();
     const memo = bindingMemo(w, identityHex);
     if (readStorage(BINDING_STORAGE_KEY) === memo) {
-      setBound(true);
-      return;
+      if (confirmedThisTab.has(memo)) {
+        setBound(true);
+        return;
+      }
+      // The browser remembers verifying, but the server is the authority. A
+      // binding reset removes the binding without telling this browser, and
+      // the module would then silently reject every score it sends. Confirm
+      // once per tab; if the server cannot be asked, trust the memory rather
+      // than nag the player for a signature.
+      let cancelled = false;
+      fetch(`/api/bind?wallet=${encodeURIComponent(w)}&identity=${encodeURIComponent(identityHex)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .catch(() => null)
+        .then((data: { bound?: boolean } | null) => {
+          if (cancelled) return;
+          if (data && data.bound === false) {
+            writeStorage(BINDING_STORAGE_KEY, null);
+            setBound(false);
+            // Runs this effect again; with the memory gone it asks to sign
+            setBindAttempt((n) => n + 1);
+          } else {
+            if (data?.bound) confirmedThisTab.add(memo);
+            setBound(true);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
     }
     setBound(false);
     if (bindInFlight.has(memo)) return;

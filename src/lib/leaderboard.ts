@@ -9,11 +9,7 @@
 // owner token never touches a public endpoint. Every table it reads is
 // already public.
 
-const HOST = process.env.SPACETIME_HTTP_HOST || 'https://maincloud.spacetimedb.com';
-// SPACETIME_MODULE_NAME first: NEXT_PUBLIC_ vars are inlined at build time,
-// so only a server-side name can be pointed at another database at runtime.
-const MODULE =
-  process.env.SPACETIME_MODULE_NAME || process.env.NEXT_PUBLIC_SPACETIME_MODULE_NAME || 'shootris-game';
+import { sql } from '@/lib/spacetimeSql';
 
 const CACHE_TTL_MS = 30_000;
 
@@ -41,33 +37,7 @@ export interface Leaderboard {
   pvp: PvpRow[];
 }
 
-let readToken: string | null = null;
 let cached: { data: Leaderboard; at: number } | null = null;
-
-async function identityToken(): Promise<string> {
-  const configured = process.env.SPACETIMEDB_READ_TOKEN;
-  if (configured) return configured;
-  if (readToken) return readToken;
-  const res = await fetch(`${HOST}/v1/identity`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Could not mint a read identity: ${res.status}`);
-  const body = (await res.json()) as { token?: string };
-  if (!body.token) throw new Error('Read identity response had no token');
-  readToken = body.token;
-  return readToken;
-}
-
-/** Run one SQL statement and return its rows as arrays of cell values. */
-async function sql(query: string): Promise<unknown[][]> {
-  const res = await fetch(`${HOST}/v1/database/${MODULE}/sql`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${await identityToken()}`, 'Content-Type': 'text/plain' },
-    body: query,
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`SpacetimeDB SQL failed: ${res.status} ${await res.text()}`);
-  const statements = (await res.json()) as Array<{ rows?: unknown[][] }>;
-  return statements[0]?.rows ?? [];
-}
 
 // u64 columns can arrive as a number or a string depending on size
 function num(cell: unknown): number {

@@ -3,6 +3,7 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { getChainRegistry } from '@/lib/chains';
 import { isSameOrigin, withinRateLimit } from '@/lib/requestGuard';
+import { sql, identityHex } from '@/lib/spacetimeSql';
 
 // Verifies that the caller's wallet signed a binding message for their
 // SpacetimeDB identity, then attests the binding into the module via the
@@ -16,6 +17,41 @@ const SPACETIME_HTTP_HOST = 'https://maincloud.spacetimedb.com';
 
 // A player verifies once per device; retries stay well under this
 const BIND_REQUESTS_PER_MINUTE = 10;
+// Checked once per page load by a returning player
+const BIND_STATUS_REQUESTS_PER_MINUTE = 30;
+
+/**
+ * GET /api/bind?wallet=0x...&identity=<hex> -> { bound: boolean }
+ *
+ * Browsers remember that they verified, so a returning player is not asked
+ * to sign every visit. That memory can go stale: a binding reset (or any
+ * server-side change) removes the binding while the browser still believes
+ * in it, and the module then silently rejects that player's scores. The
+ * client asks here before trusting what it remembers.
+ */
+export async function GET(req: Request) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Not available to third parties' }, { status: 403 });
+  }
+  if (!withinRateLimit(req, 'bind-status', BIND_STATUS_REQUESTS_PER_MINUTE)) {
+    return NextResponse.json({ error: 'Slow down' }, { status: 429 });
+  }
+  const params = new URL(req.url).searchParams;
+  const wallet = (params.get('wallet') || '').toLowerCase();
+  const identity = (params.get('identity') || '').replace(/^0x/i, '').toLowerCase();
+  // Both are validated to strict formats before they reach the query
+  if (!/^0x[0-9a-f]{40}$/.test(wallet) || !/^[0-9a-f]{64}$/.test(identity)) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+  try {
+    const rows = await sql(`SELECT identity FROM wallet_bindings WHERE wallet = '${wallet}'`);
+    const bound = rows.some((row) => identityHex(row[0]) === identity);
+    return NextResponse.json({ bound }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    console.warn('[bind] status check failed:', error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: 'Status unavailable' }, { status: 503 });
+  }
+}
 
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) {

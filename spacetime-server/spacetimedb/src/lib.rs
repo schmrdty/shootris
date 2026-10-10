@@ -594,6 +594,24 @@ pub fn admin_bind_wallet(ctx: &ReducerContext, wallet: String, identity_hex: Str
     Ok(())
 }
 
+/// Owner only: forget every wallet binding, so each player re-verifies with
+/// one signature on their next visit. For use after the attestor token may
+/// have been exposed: anything it bound, forged or real, is cleared, and
+/// only bindings attested afresh by the new attestor exist afterwards.
+///   spacetime call shootris-game reset_wallet_bindings
+#[reducer]
+pub fn reset_wallet_bindings(ctx: &ReducerContext) -> Result<(), String> {
+    if ctx.sender != owner_identity() {
+        return Err("Only the database owner may reset wallet bindings".into());
+    }
+    let wallets: Vec<String> = ctx.db.wallet_bindings().iter().map(|b| b.wallet).collect();
+    for wallet in &wallets {
+        ctx.db.wallet_bindings().wallet().delete(wallet);
+    }
+    log::info!("reset_wallet_bindings: cleared {} bindings", wallets.len());
+    Ok(())
+}
+
 // =========================
 // Reducers: Player management
 // =========================
