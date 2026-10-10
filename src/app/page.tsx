@@ -14,6 +14,7 @@ import { ShareOnFarcaster } from '@/components/ShareOnFarcaster';
 import { ChevronsUp, Gamepad2, Swords, Trophy, Settings, BookOpen, TriangleAlert, Sparkles, ExternalLink as ExternalLinkIcon } from 'lucide-react';
 import { ExternalLink } from '@/components/ExternalLink';
 import { SHOOTRIS_CARDS } from '@/app/config/onchainkit';
+import { TOTAL_MINTED_CARDS } from '@/lib/skins';
 import { SkinUnlockPrompt } from '@/components/SkinUnlockPrompt';
 import { ShootrisLogo } from '@/components/ShootrisLogo';
 
@@ -201,7 +202,7 @@ export default function Home() {
               <Sparkles className="h-7 w-7" aria-hidden="true" /> COLLECT THE CARDS
             </CardTitle>
             <CardDescription className="text-base font-semibold text-gray-300">
-              Collect all 7 cards of a set to unlock its piece skins in game. Collect all 28 to unlock every set.
+              Collect all 7 cards of a set to unlock its piece skins in game. Collect all {TOTAL_MINTED_CARDS} to unlock every set.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">

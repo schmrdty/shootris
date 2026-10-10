@@ -4,24 +4,60 @@
 // (set, piece) skin. Only the ART and CARD NAMES matter on the mint side.
 
 export type PieceKey = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
-export type SkinSet = 'basic' | 'earthen' | 'neon' | 'collector' | 'gunmetal';
 
 export const PIECE_KEYS: PieceKey[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
-export const SKIN_SETS: SkinSet[] = ['basic', 'earthen', 'neon', 'collector', 'gunmetal'];
 
-// Sets obtainable by holding a vibe.market card. gunmetal is deliberately
-// absent: it is never minted, so it is a free in-game choice rather than an
-// unlock, and the metadata parser never maps a card to it.
-export const MINTED_SETS: SkinSet[] = ['basic', 'earthen', 'neon', 'collector'];
-export const FREE_SETS: SkinSet[] = ['gunmetal'];
+// ── Set registry ──────────────────────────────────────────────────────
+// Every skin set lives here and nowhere else. To launch a set: add its key
+// to SkinSet, add one entry below, and drop seven tiles into
+// public/skins/<key>/. Then run `npm run check:cards` against the planned
+// card names BEFORE minting (see scripts/check-card-names.ts).
 
-export const SET_LABELS: Record<SkinSet, string> = {
-  basic: 'Basic',
-  earthen: 'Earthen',
-  neon: 'Neon',
-  collector: 'Collector (alt art)',
-  gunmetal: 'Gunmetal',
+export type SkinSet = 'basic' | 'earthen' | 'neon' | 'collector' | 'gunmetal';
+
+interface SetDefinition {
+  label: string;
+  /** Obtainable by holding cards. Unminted sets are free in-game choices. */
+  minted: boolean;
+  /**
+   * The card's Set trait must equal one of these exactly (ignoring case,
+   * spacing and punctuation). Exact on purpose: loose keyword matching once
+   * filed a "Golden Boot" sports card under Collector.
+   */
+  names: string[];
+  /** Piece nicknames printed on this set's cards. Never matched for another set. */
+  nicknames?: Partial<Record<PieceKey, string[]>>;
+}
+
+const NEON_NICKNAMES = { I: ['lance'], O: ['core'], T: ['conductor'], S: ['serpent'], Z: ['fang'], J: ['hook'], L: ['crane'] };
+const EARTHEN_NICKNAMES = { I: ['root'], O: ['cobble'], T: ['bloom'], S: ['fern'], Z: ['ember'], J: ['riverstone'], L: ['harvest'] };
+
+const SET_DEFINITIONS: Record<SkinSet, SetDefinition> = {
+  basic: { label: 'Basic', minted: true, names: ['Basic', 'Classic'] },
+  earthen: { label: 'Earthen', minted: true, names: ['Earthen'], nicknames: EARTHEN_NICKNAMES },
+  neon: { label: 'Neon', minted: true, names: ['Neon'], nicknames: NEON_NICKNAMES },
+  // Alt-art takes on the other sets, so they may carry either set's names
+  collector: {
+    label: 'Collector (alt art)',
+    minted: true,
+    names: ['Collector', 'Alt Art', 'Variant'],
+    nicknames: Object.fromEntries(
+      (Object.keys(NEON_NICKNAMES) as PieceKey[]).map((k) => [k, [...NEON_NICKNAMES[k], ...EARTHEN_NICKNAMES[k]]])
+    ),
+  },
+  // Never minted: a free in-game choice, and no card can ever map to it
+  gunmetal: { label: 'Gunmetal', minted: false, names: [] },
 };
+
+export const SKIN_SETS = Object.keys(SET_DEFINITIONS) as SkinSet[];
+export const MINTED_SETS = SKIN_SETS.filter((s) => SET_DEFINITIONS[s].minted);
+export const FREE_SETS = SKIN_SETS.filter((s) => !SET_DEFINITIONS[s].minted);
+export const SET_LABELS = Object.fromEntries(SKIN_SETS.map((s) => [s, SET_DEFINITIONS[s].label])) as Record<
+  SkinSet,
+  string
+>;
+/** Cards needed to unlock every minted set: seven per set. */
+export const TOTAL_MINTED_CARDS = MINTED_SETS.length * PIECE_KEYS.length;
 
 // The engine stores neon hex codes as piece identity (see tetrominoes.ts),
 // so colour is how we know which piece a cell belongs to.
@@ -33,18 +69,6 @@ export const PIECE_BY_COLOR: Record<string, PieceKey> = {
   '#f00000': 'Z',
   '#0000f0': 'J',
   '#f0a000': 'L',
-};
-
-// Card nicknames from the art brief, so cards named
-// "The Lance" / "The Root" still resolve to a piece.
-const NICKNAME_BY_PIECE: Record<PieceKey, string[]> = {
-  I: ['lance', 'root'],
-  O: ['core', 'cobble'],
-  T: ['conductor', 'bloom'],
-  S: ['serpent', 'fern'],
-  Z: ['fang', 'ember'],
-  J: ['hook', 'riverstone'],
-  L: ['crane', 'harvest'],
 };
 
 /** Per-cell tile art. Missing files simply fall back to the flat colour. */
@@ -66,75 +90,98 @@ interface MetadataAttribute {
   value?: unknown;
 }
 
-/**
- * Parse the first trait that yields a result, checking trait names in
- * priority order (not metadata order). vibe.market cards carry both
- * "Set: Neon" and "Edition: First Edition", so "set" must win outright.
- */
-function fromAttrs<T>(
-  attrs: MetadataAttribute[] | undefined,
-  traitNames: string[],
-  parse: (text: string) => T | null
-): T | null {
+// Real cards carry exact `Set` and `Piece` traits (e.g. Set=Neon, Piece=Z).
+// Other traits, such as Edition=First Edition or Foil=Prism, are never read.
+const SET_TRAITS = ['set', 'series'];
+const PIECE_TRAITS = ['piece', 'shape', 'block', 'tetromino'];
+
+/** Lowercase, punctuation to spaces: "Alt-Art" and "alt art" are equal. */
+function normalize(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function trait(attrs: MetadataAttribute[] | undefined, names: string[]): string | null {
   if (!Array.isArray(attrs)) return null;
-  for (const trait of traitNames) {
+  for (const name of names) {
     for (const a of attrs) {
-      if (typeof a?.trait_type === 'string' && a.trait_type.trim().toLowerCase() === trait) {
-        const parsed = parse(String(a.value ?? '').trim());
-        if (parsed) return parsed;
+      if (typeof a?.trait_type === 'string' && a.trait_type.trim().toLowerCase() === name) {
+        const value = String(a.value ?? '').trim();
+        if (value) return value;
       }
     }
   }
   return null;
 }
 
-function setFromText(text: string): SkinSet | null {
-  const t = text.toLowerCase();
-  // Whole words only, so e.g. "Heart" never reads as "earth".
-  // Alt-art collector variants win over the base set they riff on.
-  if (/\b(collector|alt[\s-]?art|variant|prism|prismatic|golden)\b/.test(t)) return 'collector';
-  if (/\b(earthen|earth)\b/.test(t)) return 'earthen';
-  if (/\bneon\b/.test(t)) return 'neon';
-  if (/\b(basic|classic)\b/.test(t)) return 'basic';
-  return null;
+/** The set whose registered name equals `text` exactly, or null. */
+function setNamed(text: string): SkinSet | null {
+  const t = normalize(text);
+  if (!t) return null;
+  return SKIN_SETS.find((s) => SET_DEFINITIONS[s].names.some((n) => normalize(n) === t)) ?? null;
 }
 
-function pieceFromText(text: string): PieceKey | null {
-  const t = text.toLowerCase();
-  for (const piece of PIECE_KEYS) {
-    for (const nick of NICKNAME_BY_PIECE[piece]) {
-      if (new RegExp('\\b' + nick + '\\b').test(t)) return piece;
+/**
+ * A piece written as its letter ("I", "T piece") or as one of THIS set's
+ * nicknames ("The Lance" counts for Neon, never for a sports set). The whole
+ * text must be the piece: "Hook Shot" is not a J.
+ */
+function pieceNamed(text: string, set: SkinSet): PieceKey | null {
+  const t = normalize(text).replace(/^the /, '');
+  const letter = t.match(/^([iotszjl])( piece)?$/);
+  if (letter) return letter[1].toUpperCase() as PieceKey;
+  const nicknames = SET_DEFINITIONS[set].nicknames ?? {};
+  return PIECE_KEYS.find((p) => nicknames[p]?.includes(t)) ?? null;
+}
+
+/** "Neon Lance" -> [neon, "lance"]: a name that starts with a registered set name. */
+function splitSetPrefix(name: string): [SkinSet, string] | null {
+  const n = normalize(name);
+  for (const set of SKIN_SETS) {
+    for (const alias of SET_DEFINITIONS[set].names) {
+      const a = normalize(alias);
+      if (a && n.startsWith(a + ' ')) return [set, n.slice(a.length + 1)];
     }
   }
-  // Piece letter as its own word, e.g. "Neon I", "T-piece", "Earthen (Z)"
-  const m = text.match(/\b([IOTSZJL])(?:[\s-]?piece)?\b/i);
-  const letter = (m?.[1] || '').toUpperCase();
-  if (letter && PIECE_KEYS.includes(letter as PieceKey)) return letter as PieceKey;
   return null;
 }
 
 /**
- * Map one card's standard NFT metadata to a skin.
- * Attributes are preferred; the card name is the fallback. Returns null when
- * the card can't be identified — those are ignored rather than guessed at.
+ * Map one card's standard NFT metadata to a skin, or null if it can't be
+ * identified with certainty. Unidentified cards unlock nothing; they are
+ * never guessed at, because a wrong guess counts toward the wrong set.
+ *
+ * - A Set trait decides the set, and must match a registered name exactly.
+ *   If it doesn't, the card is ignored: the name is NOT consulted, or a
+ *   "Golden Boot" with Set=Sports would read as Collector.
+ * - A Piece trait decides the piece, as a letter or this set's nickname.
+ * - Only with no Set trait at all does the name decide, and only in the
+ *   form "<Set> <piece>", e.g. "Neon I", "Earthen Cobble".
  */
 export function parseCardToSkin(
   name: string,
   attributes?: MetadataAttribute[],
   rarityCode?: number
 ): { set: SkinSet; piece: PieceKey } | null {
-  const set =
-    fromAttrs(attributes, ['set', 'collection', 'series', 'edition'], setFromText) || setFromText(name);
-  const piece =
-    fromAttrs(attributes, ['piece', 'tetromino', 'shape', 'block'], pieceFromText) || pieceFromText(name);
-  if (!piece) return null;
+  void rarityCode; // rarity never identifies a card
+  const setTrait = trait(attributes, SET_TRAITS);
+  const pieceTrait = trait(attributes, PIECE_TRAITS);
 
-  // Rarity is recorded but never used to infer a set: under "collect all 7"
-  // a misattributed card would corrupt completion counts. Identify from the
-  // card's own set words, or ignore it.
-  void rarityCode;
-  if (!set) return null;
-  return { set, piece };
+  let set: SkinSet | null;
+  let nameRest: string | null = null;
+  if (setTrait) {
+    set = setNamed(setTrait);
+    if (!set) return null;
+    // A name that repeats the set ("Neon Lance") may still name the piece
+    nameRest = splitSetPrefix(name)?.[0] === set ? splitSetPrefix(name)![1] : null;
+  } else {
+    const split = splitSetPrefix(name);
+    if (!split) return null;
+    [set, nameRest] = split;
+  }
+  if (!SET_DEFINITIONS[set].minted) return null;
+
+  const piece = pieceTrait ? pieceNamed(pieceTrait, set) : nameRest ? pieceNamed(nameRest, set) : null;
+  return piece ? { set, piece } : null;
 }
 
 export type AppliedSkins = Partial<Record<PieceKey, SkinSet>>;

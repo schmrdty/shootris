@@ -1,0 +1,12 @@
+{
+  "_about": "Copy to planned-cards.json and list every card of a new set exactly as it will be minted: its name and its Set/Piece traits. 'intended' is what it should unlock. Then run: npm run check:cards. The set key (here 'sports') must first be registered in src/lib/skins.ts.",
+  "cards": [
+    { "name": "Sports Dunk",     "attributes": { "Set": "Sports", "Piece": "I" }, "intended": "sports I" },
+    { "name": "Sports Hat Trick","attributes": { "Set": "Sports", "Piece": "O" }, "intended": "sports O" },
+    { "name": "Sports Slam",     "attributes": { "Set": "Sports", "Piece": "T" }, "intended": "sports T" },
+    { "name": "Sports Curveball","attributes": { "Set": "Sports", "Piece": "S" }, "intended": "sports S" },
+    { "name": "Sports Spike",    "attributes": { "Set": "Sports", "Piece": "Z" }, "intended": "sports Z" },
+    { "name": "Sports Hook Shot","attributes": { "Set": "Sports", "Piece": "J" }, "intended": "sports J" },
+    { "name": "Sports Home Run", "attributes": { "Set": "Sports", "Piece": "L" }, "intended": "sports L" }
+  ]
+}

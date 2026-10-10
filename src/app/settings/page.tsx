@@ -10,7 +10,7 @@ import { useSpacetimeDB } from '@/lib/spacetime/hooks';
 import { useGameTheme } from '@/lib/theme';
 import Link from 'next/link';
 import { Sprout, Zap, Sparkles } from 'lucide-react';
-import { SET_LABELS, PIECE_KEYS, FREE_SETS } from '@/lib/skins';
+import { SET_LABELS, PIECE_KEYS, FREE_SETS, TOTAL_MINTED_CARDS } from '@/lib/skins';
 import { useCollection } from '@/lib/collection';
 import { useCallback } from 'react';
 import { useMusicPreference } from '@/lib/music';
@@ -80,8 +80,8 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-300">
-              Collect all 7 cards of a set on vibe.market to unlock it in game. Collect all 28 to
-              unlock every set.
+              Collect all 7 cards of a set on vibe.market to unlock it in game. Collect all{' '}
+              {TOTAL_MINTED_CARDS} to unlock every set.
             </p>
             <div className="flex flex-wrap gap-3 text-sm font-bold">
               <ExternalLink href={SHOOTRIS_CARDS.vibeMarketUrl} className="text-yellow-300 underline hover:text-yellow-200">

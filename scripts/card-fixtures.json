@@ -1,0 +1,21 @@
+{
+  "_about": "Real Shootris card metadata read from the vibe.market collection (0x0C197b16...7911, Robinhood Chain) on 2026-10-10. Every distinct card name seen, with its identifying traits. check-card-names must map each exactly as its Set and Piece traits say, so a parser change can never strip a holder's unlock.",
+  "cards": [
+    { "name": "Basic I", "attributes": { "Set": "Basic", "Piece": "I", "Edition": "First Edition", "Foil": "Prism", "Rarity": "Common" } },
+    { "name": "Basic J", "attributes": { "Set": "Basic", "Piece": "J", "Edition": "First Edition", "Foil": "Satin", "Rarity": "Common" } },
+    { "name": "Basic L", "attributes": { "Set": "Basic", "Piece": "L", "Edition": "First Edition", "Foil": "Satin", "Rarity": "Common" } },
+    { "name": "Basic O", "attributes": { "Set": "Basic", "Piece": "O", "Edition": "First Edition", "Foil": "Holo", "Rarity": "Common" } },
+    { "name": "Basic S", "attributes": { "Set": "Basic", "Piece": "S", "Edition": "First Edition", "Foil": "Satin", "Rarity": "Common" } },
+    { "name": "Basic T", "attributes": { "Set": "Basic", "Piece": "T", "Edition": "First Edition", "Foil": "Satin", "Rarity": "Common" } },
+    { "name": "Basic Z", "attributes": { "Set": "Basic", "Piece": "Z", "Edition": "First Edition", "Foil": "Satin", "Rarity": "Common" } },
+    { "name": "Earthen Cobble", "attributes": { "Set": "Earthen", "Piece": "O", "Edition": "First Edition", "Foil": "Satin", "Rarity": "Rare" } },
+    { "name": "Earthen Ember", "attributes": { "Set": "Earthen", "Piece": "Z", "Edition": "Standard Edition", "Foil": "Satin", "Rarity": "Rare" } },
+    { "name": "Earthen Fern", "attributes": { "Set": "Earthen", "Piece": "S", "Edition": "Standard Edition", "Foil": "Holo", "Rarity": "Rare" } },
+    { "name": "Earthen Riverstone", "attributes": { "Set": "Earthen", "Piece": "J", "Edition": "Standard Edition", "Foil": "Satin", "Rarity": "Rare" } },
+    { "name": "Neon Core", "attributes": { "Set": "Neon", "Piece": "O", "Edition": "First Edition", "Foil": "Satin", "Rarity": "Epic" } },
+    { "name": "Neon Fang", "attributes": { "Set": "Neon", "Piece": "Z", "Edition": "First Edition", "Foil": "Prism", "Rarity": "Epic" } },
+    { "name": "Neon Hook", "attributes": { "Set": "Neon", "Piece": "J", "Edition": "Standard Edition", "Foil": "Satin", "Rarity": "Epic" } },
+    { "name": "Neon Lance", "attributes": { "Set": "Neon", "Piece": "I", "Edition": "Standard Edition", "Foil": "Holo", "Rarity": "Epic" } },
+    { "name": "Neon Serpent", "attributes": { "Set": "Neon", "Piece": "S", "Edition": "Standard Edition", "Foil": "Satin", "Rarity": "Epic" } }
+  ]
+}
