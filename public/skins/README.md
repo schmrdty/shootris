@@ -36,6 +36,8 @@ piece's colour, so round art works well **as long as the corners are
 transparent**: the colour fills them and the piece still reads as square
 blocks.
 
+**The Sports set is built this way: balls with transparent corners.**
+
 Never paint the corners the board's background colour (black for Neon,
 cream for Earthen). The colour square is then covered and the balls float
 with no visible edges, so players misjudge what fits. Corners in the
