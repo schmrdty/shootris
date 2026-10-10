@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TETROMINOES, rotatePiece } from '@/lib/tetris/tetrominoes';
 import type { Tetromino } from '@/lib/tetris/types';
-import { useGameTheme } from '@/lib/theme';
+import { useGameTheme, EMPTY_CELL_COLORS, type GameTheme } from '@/lib/theme';
 import { PIECE_KEYS, SKIN_SETS, SET_LABELS, tileUrl, type PieceKey, type SkinSet } from '@/lib/skins';
 import { Sprout, Zap, CircleCheck, TriangleAlert } from 'lucide-react';
 
@@ -17,10 +17,56 @@ const SIZES = [
   { label: 'Opponent board (10px)', px: 10 },
 ];
 
+type CornerVerdict = { kind: 'blends'; themes: GameTheme[] } | { kind: 'round' } | { kind: 'fine' };
+
+/**
+ * Collision always happens on the square cell, so a player must be able to
+ * see each cell's square edge. A tile normally sits on a square of its
+ * piece's colour, which shows through transparent corners: round art (a
+ * ball, say) still reads as a square block. The edge disappears only when
+ * the corners are painted the same colour as the empty board around them,
+ * e.g. a ball on a black background in Neon, which then floats.
+ *
+ * Samples a little way in from each corner: past a bevel or rim drawn at
+ * the edge, but still outside a round shape. Calibrated against every
+ * shipped tile (no false alarms) and against balls painted on black, navy
+ * and cream (all caught).
+ */
+function checkCorners(img: HTMLImageElement): CornerVerdict {
+  const SIZE = 64;
+  const INSET = 0.15;
+  const CLOSE = 60; // RGB distance that reads as "the same colour" on a board
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return { kind: 'fine' };
+  ctx.drawImage(img, 0, 0, SIZE, SIZE);
+  const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+  const at = (fx: number, fy: number) => {
+    const i = (Math.round(fy * (SIZE - 1)) * SIZE + Math.round(fx * (SIZE - 1))) * 4;
+    return [data[i], data[i + 1], data[i + 2], data[i + 3] / 255];
+  };
+  const corners = [
+    [INSET, INSET],
+    [1 - INSET, INSET],
+    [INSET, 1 - INSET],
+    [1 - INSET, 1 - INSET],
+  ].map(([x, y]) => at(x, y));
+
+  const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const themes = (Object.keys(EMPTY_CELL_COLORS) as GameTheme[]).filter((theme) => {
+    const [br, bg, bb] = hex(EMPTY_CELL_COLORS[theme]);
+    return corners.filter(([r, g, b, a]) => a > 0.85 && Math.hypot(r - br, g - bg, b - bb) < CLOSE).length >= 3;
+  });
+  if (themes.length) return { kind: 'blends', themes };
+  return corners.filter(([, , , a]) => a < 0.15).length >= 3 ? { kind: 'round' } : { kind: 'fine' };
+}
+
 /** Reports whether a tile file exists and whether it meets the spec. */
 function TileStatus({ set, piece }: { set: SkinSet; piece: PieceKey }) {
   const [state, setState] = useState<{ w: number; h: number } | null>(null);
   const [missing, setMissing] = useState(false);
+  const [corners, setCorners] = useState<CornerVerdict | null>(null);
 
   const square = state ? state.w === state.h : false;
   const bigEnough = state ? state.w >= 128 : false;
@@ -33,7 +79,10 @@ function TileStatus({ set, piece }: { set: SkinSet; piece: PieceKey }) {
         alt=""
         aria-hidden="true"
         className="hidden"
-        onLoad={(e) => setState({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+        onLoad={(e) => {
+          setState({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight });
+          setCorners(checkCorners(e.currentTarget));
+        }}
         onError={() => setMissing(true)}
       />
       {missing ? (
@@ -51,6 +100,16 @@ function TileStatus({ set, piece }: { set: SkinSet; piece: PieceKey }) {
         </span>
       ) : (
         <span className="text-gray-600">checking…</span>
+      )}
+      {corners?.kind === 'blends' && (
+        <span className="block text-yellow-400">
+          <TriangleAlert className="inline h-3 w-3 mr-1" aria-hidden="true" />
+          Corners match the {corners.themes.join(' and ')} board, so the cell edge vanishes. Leave them
+          transparent or paint them in the piece&apos;s material.
+        </span>
+      )}
+      {corners?.kind === 'round' && (
+        <span className="block text-cyan-400">Round art: the piece colour fills its corners</span>
       )}
     </div>
   );

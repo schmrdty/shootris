@@ -22,11 +22,39 @@ player in Settings → Card Art.
 ## What each file must be
 
 - **256×256 PNG**
-- **Visible separation between neighbouring cells** — either transparent
+- **Visible separation between neighbouring cells**: either transparent
   inner padding, or edge definition drawn into the tile itself (a bevel or a
   dark border). The shipped sets use the second approach.
 - One self-contained block face, **not** the whole Shootris piece shape
 - Readable at 13 px (squint test)
+
+## Round art (balls, coins, faces…)
+
+Collision always happens on the **square** cell, so players must be able to
+see every cell's square edge. The game draws each tile over a square of its
+piece's colour, so round art works well **as long as the corners are
+transparent**: the colour fills them and the piece still reads as square
+blocks.
+
+Never paint the corners the board's background colour (black for Neon,
+cream for Earthen). The colour square is then covered and the balls float
+with no visible edges, so players misjudge what fits. Corners in the
+piece's own material are fine. `/skins-preview` flags any tile whose
+corners blend into a board.
+
+## Adding a new set
+
+1. Add the set to `SkinSet` and to `SET_DEFINITIONS` in `src/lib/skins.ts`
+   (one entry: label, the exact `Set` trait value, any piece nicknames).
+2. Put its seven tiles in `public/skins/<set>/`.
+3. **Before minting**, list every planned card in
+   `scripts/planned-cards.json` (copy the `.example.json`) and run
+   `npm run check:cards`. It fails if any card would land in the wrong set or
+   piece, two cards claim one piece, or a piece has no card.
+
+Cards are identified by their `Set` and `Piece` traits, matched exactly.
+Avoid set names that resemble an existing one ("Golden…", "Classic…",
+"Earth…"): the parser no longer guesses, but players will.
 
 ## Why only 7 per set
 

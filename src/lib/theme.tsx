@@ -30,6 +30,12 @@ export const EARTHEN_COLORS: Record<string, string> = {
   '#6b7280': '#857a68', // PvP obstacle — weathered stone
 };
 
+/** The empty board behind every cell, per theme. */
+export const EMPTY_CELL_COLORS: Record<GameTheme, string> = {
+  neon: '#000000',
+  earthen: '#efe7d4',
+};
+
 interface GameThemeContextValue {
   theme: GameTheme;
   isEarthen: boolean;
@@ -97,7 +103,7 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
     [isEarthen]
   );
 
-  const emptyCellColor = isEarthen ? '#efe7d4' : '#000';
+  const emptyCellColor = EMPTY_CELL_COLORS[theme];
 
   const cellStyle = useCallback(
     (color: string | null, size: number): React.CSSProperties => {
@@ -105,7 +111,7 @@ export function GameThemeProvider({ children }: { children: ReactNode }) {
       const base: React.CSSProperties = {
         width: `${size}px`,
         height: `${size}px`,
-        backgroundColor: themed || (isEarthen ? '#efe7d4' : '#000'),
+        backgroundColor: themed || EMPTY_CELL_COLORS[isEarthen ? 'earthen' : 'neon'],
         boxShadow: themed
           ? isEarthen
             ? `inset 0 ${size / 12}px ${size / 6}px rgba(255,250,235,0.45), inset 0 -${size / 12}px ${size / 6}px rgba(60,44,26,0.45)`

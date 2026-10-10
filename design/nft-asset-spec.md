@@ -111,6 +111,16 @@ Accepted piece identifiers: the letters `I O T S Z J L`, or these nicknames:
 A card the parser can't identify is **ignored**, not guessed at — so a typo
 in a card name means that card silently unlocks nothing. Names matter.
 
+**Matching is exact.** A card's `Set` trait must equal a registered set name
+(ignoring case and punctuation); if it doesn't, the card is ignored and its
+name is not consulted. Nicknames only count within their own set: "Root" is
+an Earthen I, so "Neon Root" unlocks nothing. This is deliberate: looser
+matching once filed a "Golden Boot" sports card under Collector.
+
+For a new set, register it in `src/lib/skins.ts` and run
+`npm run check:cards` against the planned card list **before minting**
+(see `public/skins/README.md`).
+
 ---
 
 ## 5. The four sets (28 cards)
