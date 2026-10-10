@@ -78,6 +78,22 @@ jobs:
             echo "::error::NEXT_PUBLIC_ENV is missing:$missing . Add every NEXT_PUBLIC_* line from the server .env.local to the secret (it is replaced whole, not merged)."
             exit 1
           fi
+          # A variable defined twice leaves which value wins up to the parser,
+          # and a stale line has already pointed a build at a dead database.
+          dupes=$(cut -d= -f1 .env.production | sort | uniq -d | tr '\n' ' ')
+          if [ -n "$dupes" ]; then
+            echo "::error::NEXT_PUBLIC_ENV defines these more than once: $dupes. Keep one line each."
+            exit 1
+          fi
+          # The game cannot save anything if its database does not exist.
+          # maincloud answers 200 for a live name or identity, 404 otherwise.
+          db=$(grep -E '^NEXT_PUBLIC_SPACETIME_MODULE_NAME=' .env.production | cut -d= -f2- | tr -d "\"'" || true)
+          db=${db:-shootris-game}
+          status=$(curl -s -o /dev/null -w '%{http_code}' "https://maincloud.spacetimedb.com/v1/database/$db")
+          if [ "$status" != "200" ]; then
+            echo "::error::NEXT_PUBLIC_SPACETIME_MODULE_NAME '$db' is not a live database on maincloud (HTTP $status)."
+            exit 1
+          fi
 
       - uses: docker/setup-buildx-action@v3
 
