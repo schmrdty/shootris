@@ -22,13 +22,12 @@ const nextConfig = {
             },
         ];
     },
+    // Nothing in the app uses next/image, so the optimizer was only an open
+    // endpoint that ran image processing on request, and it has carried its
+    // own critical advisory (GHSA-2xp9-vwfh-vxw4). Off. The Ohara host it
+    // allowed is a leftover from before the migration.
     images: {
-        remotePatterns: [
-            {
-                protocol: 'https',
-                hostname: 'ohara-assets.s3.us-east-2.amazonaws.com',
-            },
-        ],
+        unoptimized: true,
     },
 };
 
