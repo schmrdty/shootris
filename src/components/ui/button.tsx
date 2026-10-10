@@ -4,8 +4,11 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+// Every button dips while it is held and springs back on release. A button
+// that is a toggle (aria-pressed) stays pushed in, with a sunken shadow, for
+// as long as it is on, so its state reads without decoding its icon.
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,background-color,border-color,box-shadow,scale,translate,filter] duration-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.96] active:brightness-90 aria-pressed:translate-y-px aria-pressed:brightness-90 aria-pressed:shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {

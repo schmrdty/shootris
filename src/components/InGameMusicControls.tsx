@@ -17,7 +17,9 @@ export function InGameMusicControls({ musicOn, onToggle }: InGameMusicControlsPr
         variant="outline"
         className="w-12 h-12 bg-black/80 border-2 border-cyan-500/50 hover:border-cyan-400 hover:bg-black/90 transition-all shadow-[0_0_10px_rgba(0,240,255,0.3)]"
         title={musicOn ? 'Mute music' : 'Unmute music'}
-        aria-label={musicOn ? 'Mute music' : 'Unmute music'}
+        aria-label="Mute music"
+        // A mute toggle: stays pushed in for as long as the music is muted
+        aria-pressed={!musicOn}
       >
         {musicOn ? <Volume2 className="w-6 h-6 text-cyan-400" /> : <VolumeX className="w-6 h-6 text-gray-500" />}
       </Button>

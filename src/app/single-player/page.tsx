@@ -582,6 +582,8 @@ export default function SinglePlayerPage() {
                 <Button
                   variant="outline"
                   aria-label={userPaused ? 'Resume' : 'Pause'}
+                  // A toggle: stays pushed in for as long as the game is paused
+                  aria-pressed={userPaused}
                   disabled={mode === null || gameState.gameOver || stageBreak !== null}
                   onClick={togglePause}
                   className="w-20 border-cyan-500 text-cyan-300"

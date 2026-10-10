@@ -192,21 +192,41 @@ function PadButton({
   className: string;
   children: ReactNode;
 }) {
+  // Pressed is tracked here, not left to CSS :active. preventDefault on
+  // touch-down (needed so the action fires instantly) also stops most phones
+  // applying :active, so the button used to give no sign it was hit.
+  const [pressed, setPressed] = useState(false);
+
   const press = (e: ReactPointerEvent<HTMLButtonElement>) => {
     e.preventDefault(); // act on touch-down: no click delay, no double fire
     if (disabled) return;
+    // The action comes first: nothing below may stop a press from landing
     onPress();
     tick();
+    setPressed(true);
+    // Keep receiving this finger's events even if it slides off the button,
+    // so the release always arrives and the button always springs back.
+    // Throws if the browser already considers the pointer gone; harmless.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // no capture: pointerup/cancel on the button still release it
+    }
   };
+  const release = () => setPressed(false);
 
   return (
     <button
       type="button"
       aria-label={label}
       disabled={disabled}
+      data-pressed={pressed || undefined}
       onPointerDown={press}
+      onPointerUp={release}
+      onPointerCancel={release}
+      onLostPointerCapture={release}
       onContextMenu={(e) => e.preventDefault()}
-      className={`flex items-center justify-center rounded-full border-2 touch-none select-none transition-transform active:scale-90 disabled:opacity-40 ${dim ? 'opacity-50' : ''} ${className}`}
+      className={`flex items-center justify-center rounded-full border-2 touch-none select-none transition-[scale,filter] duration-75 ${pressed ? 'scale-90 brightness-125' : ''} disabled:opacity-40 ${dim ? 'opacity-50' : ''} ${className}`}
     >
       {children}
     </button>
