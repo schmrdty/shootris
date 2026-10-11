@@ -10,14 +10,14 @@ import { useSpacetimeDB } from '@/lib/spacetime/hooks';
 import { useGameTheme } from '@/lib/theme';
 import Link from 'next/link';
 import { Sprout, Zap, Sparkles } from 'lucide-react';
-import { SET_LABELS, PIECE_KEYS, FREE_SETS, TOTAL_MINTED_CARDS } from '@/lib/skins';
+import { SET_LABELS, PIECE_KEYS, FREE_SETS, cardsToComplete } from '@/lib/skins';
 import { useCollection } from '@/lib/collection';
 import { useCallback } from 'react';
 import { useMusicPreference } from '@/lib/music';
 import { usePlayerStats } from '@/lib/spacetime/stats';
 import { PlayerName } from '@/components/PlayerName';
 import { ExternalLink } from '@/components/ExternalLink';
-import { SHOOTRIS_CARDS } from '@/app/config/onchainkit';
+import { CARD_COLLECTIONS, LIVE_COLLECTIONS } from '@/app/config/collections';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -79,51 +79,65 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-300">
-              Collect all 7 cards of a set on vibe.market to unlock it in game. Collect all{' '}
-              {TOTAL_MINTED_CARDS} to unlock every set.
-            </p>
-            <div className="flex flex-wrap gap-3 text-sm font-bold">
-              <ExternalLink href={SHOOTRIS_CARDS.vibeMarketUrl} className="text-yellow-300 underline hover:text-yellow-200">
-                Packs on vibe.market
-              </ExternalLink>
-              <ExternalLink href={SHOOTRIS_CARDS.openSeaUrl} className="text-cyan-300 underline hover:text-cyan-200">
-                Cards on OpenSea
-              </ExternalLink>
-            </div>
+            <p className="text-sm text-gray-300">Collect all 7 cards of a set on vibe.market to unlock it in game.</p>
 
             {!address ? (
               <p className="text-sm text-yellow-400">
-                Connect the wallet that holds your Shootris cards to see your progress.
+                Connect the wallet that holds your cards to see your progress.
               </p>
             ) : collectionLoading ? (
               <p className="text-sm text-gray-400">Checking your cards…</p>
             ) : null}
 
-            <div className="space-y-2">
-              {setProgress.map((p) => (
-                <div key={p.set} className="flex items-center justify-between gap-3 rounded border border-gray-800 p-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-white">{SET_LABELS[p.set]}</p>
-                    <p className="text-xs text-gray-400">
-                      {p.held.length}/{p.total}
-                      {p.held.length > 0 && p.held.length < p.total && ` (have ${p.held.join(' ')})`}
-                    </p>
+            {LIVE_COLLECTIONS.map((collection) => {
+              const info = CARD_COLLECTIONS[collection];
+              return (
+                <section key={collection} className="space-y-2">
+                  {LIVE_COLLECTIONS.length > 1 && <h3 className="text-base font-black text-white">{info.label}</h3>}
+                  <p className="text-xs text-gray-400">
+                    Collect all {cardsToComplete(collection)} to unlock every {info.label} set.
+                  </p>
+                  <div className="flex flex-wrap gap-3 text-sm font-bold">
+                    {info.vibeMarketUrl && (
+                      <ExternalLink href={info.vibeMarketUrl} className="text-yellow-300 underline hover:text-yellow-200">
+                        Packs on vibe.market
+                      </ExternalLink>
+                    )}
+                    {info.openSeaUrl && (
+                      <ExternalLink href={info.openSeaUrl} className="text-cyan-300 underline hover:text-cyan-200">
+                        Cards on OpenSea
+                      </ExternalLink>
+                    )}
                   </div>
-                  {p.complete ? (
-                    <Button
-                      size="sm"
-                      onClick={() => applySkins(Object.fromEntries(PIECE_KEYS.map((k) => [k, p.set])))}
-                      className="bg-yellow-600 hover:bg-yellow-700 text-white shrink-0"
-                    >
-                      Use
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-gray-500 shrink-0">Locked</span>
-                  )}
-                </div>
-              ))}
+                  {setProgress
+                    .filter((p) => p.collection === collection)
+                    .map((p) => (
+                      <div key={p.set} className="flex items-center justify-between gap-3 rounded border border-gray-800 p-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white">{SET_LABELS[p.set]}</p>
+                          <p className="text-xs text-gray-400">
+                            {p.held.length}/{p.total}
+                            {p.held.length > 0 && p.held.length < p.total && ` (have ${p.held.join(' ')})`}
+                          </p>
+                        </div>
+                        {p.complete ? (
+                          <Button
+                            size="sm"
+                            onClick={() => applySkins(Object.fromEntries(PIECE_KEYS.map((k) => [k, p.set])))}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white shrink-0"
+                          >
+                            Use
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-gray-500 shrink-0">Locked</span>
+                        )}
+                      </div>
+                    ))}
+                </section>
+              );
+            })}
 
+            <div className="space-y-2">
               {FREE_SETS.map((set) => (
                 <div key={set} className="flex items-center justify-between gap-3 rounded border border-gray-800 p-2">
                   <div>

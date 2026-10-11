@@ -7,18 +7,28 @@ export type PieceKey = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
 
 export const PIECE_KEYS: PieceKey[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
 
+// ── Collections ───────────────────────────────────────────────────────
+// A collection is one vibe.market card contract; its address and deploy
+// block live in src/app/config/collections.ts. Every minted set belongs to
+// exactly one collection, and a card is only ever matched against its own
+// collection's sets. So a SmasherDasher set named "Neon" can never unlock
+// the Shootris Neon set, however its cards are labelled.
+
+export type CollectionKey = 'shootris' | 'sportris' | 'smasherdasher';
+
 // ── Set registry ──────────────────────────────────────────────────────
 // Every skin set lives here and nowhere else. To launch a set: add its key
 // to SkinSet, add one entry below, and drop seven tiles into
-// public/skins/<key>/. Then run `npm run check:cards` against the planned
-// card names BEFORE minting (see scripts/check-card-names.ts).
+// public/skins/<key>/. Set keys name folders, so they must be unique across
+// all collections: prefix new ones with their collection ("sportris-court").
+// Then run `npm run check:cards` against the planned cards BEFORE minting.
 
 export type SkinSet = 'basic' | 'earthen' | 'neon' | 'collector' | 'gunmetal';
 
 interface SetDefinition {
   label: string;
-  /** Obtainable by holding cards. Unminted sets are free in-game choices. */
-  minted: boolean;
+  /** The collection whose cards unlock this set. Omitted: a free set no card can unlock. */
+  collection?: CollectionKey;
   /**
    * The card's Set trait must equal one of these exactly (ignoring case,
    * spacing and punctuation). Exact on purpose: loose keyword matching once
@@ -33,31 +43,44 @@ const NEON_NICKNAMES = { I: ['lance'], O: ['core'], T: ['conductor'], S: ['serpe
 const EARTHEN_NICKNAMES = { I: ['root'], O: ['cobble'], T: ['bloom'], S: ['fern'], Z: ['ember'], J: ['riverstone'], L: ['harvest'] };
 
 const SET_DEFINITIONS: Record<SkinSet, SetDefinition> = {
-  basic: { label: 'Basic', minted: true, names: ['Basic', 'Classic'] },
-  earthen: { label: 'Earthen', minted: true, names: ['Earthen'], nicknames: EARTHEN_NICKNAMES },
-  neon: { label: 'Neon', minted: true, names: ['Neon'], nicknames: NEON_NICKNAMES },
+  basic: { label: 'Basic', collection: 'shootris', names: ['Basic', 'Classic'] },
+  earthen: { label: 'Earthen', collection: 'shootris', names: ['Earthen'], nicknames: EARTHEN_NICKNAMES },
+  neon: { label: 'Neon', collection: 'shootris', names: ['Neon'], nicknames: NEON_NICKNAMES },
   // Alt-art takes on the other sets, so they may carry either set's names
   collector: {
     label: 'Collector (alt art)',
-    minted: true,
+    collection: 'shootris',
     names: ['Collector', 'Alt Art', 'Variant'],
     nicknames: Object.fromEntries(
       (Object.keys(NEON_NICKNAMES) as PieceKey[]).map((k) => [k, [...NEON_NICKNAMES[k], ...EARTHEN_NICKNAMES[k]]])
     ),
   },
   // Never minted: a free in-game choice, and no card can ever map to it
-  gunmetal: { label: 'Gunmetal', minted: false, names: [] },
+  gunmetal: { label: 'Gunmetal', names: [] },
 };
 
 export const SKIN_SETS = Object.keys(SET_DEFINITIONS) as SkinSet[];
-export const MINTED_SETS = SKIN_SETS.filter((s) => SET_DEFINITIONS[s].minted);
-export const FREE_SETS = SKIN_SETS.filter((s) => !SET_DEFINITIONS[s].minted);
+export const MINTED_SETS = SKIN_SETS.filter((s) => SET_DEFINITIONS[s].collection);
+export const FREE_SETS = SKIN_SETS.filter((s) => !SET_DEFINITIONS[s].collection);
 export const SET_LABELS = Object.fromEntries(SKIN_SETS.map((s) => [s, SET_DEFINITIONS[s].label])) as Record<
   SkinSet,
   string
 >;
-/** Cards needed to unlock every minted set: seven per set. */
-export const TOTAL_MINTED_CARDS = MINTED_SETS.length * PIECE_KEYS.length;
+
+/** The minted sets a collection's cards can unlock. */
+export function setsOf(collection: CollectionKey): SkinSet[] {
+  return MINTED_SETS.filter((s) => collectionOf(s) === collection);
+}
+
+/** The collection whose cards unlock this set; undefined for a free set. */
+export function collectionOf(set: SkinSet): CollectionKey | undefined {
+  return SET_DEFINITIONS[set].collection;
+}
+
+/** Cards needed to unlock every set in a collection: seven per set. */
+export function cardsToComplete(collection: CollectionKey): number {
+  return setsOf(collection).length * PIECE_KEYS.length;
+}
 
 // The engine stores neon hex codes as piece identity (see tetrominoes.ts),
 // so colour is how we know which piece a cell belongs to.
@@ -81,6 +104,7 @@ export interface OwnedCard {
   name: string;
   image?: string;
   rarity?: number;
+  collection: CollectionKey;
   set: SkinSet;
   piece: PieceKey;
 }
@@ -113,11 +137,11 @@ function trait(attrs: MetadataAttribute[] | undefined, names: string[]): string 
   return null;
 }
 
-/** The set whose registered name equals `text` exactly, or null. */
-function setNamed(text: string): SkinSet | null {
+/** The set in this collection whose registered name equals `text` exactly, or null. */
+function setNamed(text: string, collection: CollectionKey): SkinSet | null {
   const t = normalize(text);
   if (!t) return null;
-  return SKIN_SETS.find((s) => SET_DEFINITIONS[s].names.some((n) => normalize(n) === t)) ?? null;
+  return setsOf(collection).find((s) => SET_DEFINITIONS[s].names.some((n) => normalize(n) === t)) ?? null;
 }
 
 /**
@@ -133,10 +157,10 @@ function pieceNamed(text: string, set: SkinSet): PieceKey | null {
   return PIECE_KEYS.find((p) => nicknames[p]?.includes(t)) ?? null;
 }
 
-/** "Neon Lance" -> [neon, "lance"]: a name that starts with a registered set name. */
-function splitSetPrefix(name: string): [SkinSet, string] | null {
+/** "Neon Lance" -> [neon, "lance"]: a name that starts with one of this collection's set names. */
+function splitSetPrefix(name: string, collection: CollectionKey): [SkinSet, string] | null {
   const n = normalize(name);
-  for (const set of SKIN_SETS) {
+  for (const set of setsOf(collection)) {
     for (const alias of SET_DEFINITIONS[set].names) {
       const a = normalize(alias);
       if (a && n.startsWith(a + ' ')) return [set, n.slice(a.length + 1)];
@@ -150,6 +174,8 @@ function splitSetPrefix(name: string): [SkinSet, string] | null {
  * identified with certainty. Unidentified cards unlock nothing; they are
  * never guessed at, because a wrong guess counts toward the wrong set.
  *
+ * - Only sets of `collection`, the contract the card was read from, are
+ *   considered. A card can never unlock another collection's set.
  * - A Set trait decides the set, and must match a registered name exactly.
  *   If it doesn't, the card is ignored: the name is NOT consulted, or a
  *   "Golden Boot" with Set=Sports would read as Collector.
@@ -160,7 +186,8 @@ function splitSetPrefix(name: string): [SkinSet, string] | null {
 export function parseCardToSkin(
   name: string,
   attributes?: MetadataAttribute[],
-  rarityCode?: number
+  rarityCode?: number,
+  collection: CollectionKey = 'shootris'
 ): { set: SkinSet; piece: PieceKey } | null {
   void rarityCode; // rarity never identifies a card
   const setTrait = trait(attributes, SET_TRAITS);
@@ -169,16 +196,16 @@ export function parseCardToSkin(
   let set: SkinSet | null;
   let nameRest: string | null = null;
   if (setTrait) {
-    set = setNamed(setTrait);
+    set = setNamed(setTrait, collection);
     if (!set) return null;
     // A name that repeats the set ("Neon Lance") may still name the piece
-    nameRest = splitSetPrefix(name)?.[0] === set ? splitSetPrefix(name)![1] : null;
+    const split = splitSetPrefix(name, collection);
+    nameRest = split?.[0] === set ? split[1] : null;
   } else {
-    const split = splitSetPrefix(name);
+    const split = splitSetPrefix(name, collection);
     if (!split) return null;
     [set, nameRest] = split;
   }
-  if (!SET_DEFINITIONS[set].minted) return null;
 
   const piece = pieceTrait ? pieceNamed(pieceTrait, set) : nameRest ? pieceNamed(nameRest, set) : null;
   return piece ? { set, piece } : null;
@@ -207,12 +234,13 @@ export function saveAppliedSkins(skins: AppliedSkins): void {
 export const SEEN_SETS_KEY = 'shootris_seen_completed_sets';
 
 // ── Set completion ────────────────────────────────────────────────────
-// A minted set is usable only once ALL seven of its pieces are held.
-// Hold all 28 cards and every minted set is complete, so "collect all 28 to
-// unlock all sets" follows automatically. Free sets are always usable.
+// A minted set is usable only once ALL seven of its pieces are held. Hold
+// every card of a collection (cardsToComplete) and all its sets are
+// complete. Free sets are always usable.
 
 export interface SetProgress {
   set: SkinSet;
+  collection: CollectionKey;
   held: PieceKey[];
   total: number;
   complete: boolean;
@@ -222,7 +250,13 @@ export function computeSetProgress(cards: OwnedCard[]): SetProgress[] {
   return MINTED_SETS.map((set) => {
     // Distinct pieces: two copies of the same card still count once
     const held = PIECE_KEYS.filter((p) => cards.some((c) => c.set === set && c.piece === p));
-    return { set, held, total: PIECE_KEYS.length, complete: held.length === PIECE_KEYS.length };
+    return {
+      set,
+      collection: collectionOf(set)!,
+      held,
+      total: PIECE_KEYS.length,
+      complete: held.length === PIECE_KEYS.length,
+    };
   });
 }
 

@@ -13,7 +13,7 @@ Set in `.env.local` (see `.env.local.example`):
 
 - `NEXT_PUBLIC_PVP_ENTRY_FEE_MYU` — whole-token PvP entry fee per match/queue entry; `0` (default) disables it. Matchmaking and the in-match PvP screen are both implemented, so this can be turned on whenever you want PvP to cost MYU.
 
-- `NEXT_PUBLIC_COLLECTION_CHAIN` / `NEXT_PUBLIC_COLLECTION_CONTRACT` — the vibe.market card collection that unlocks piece skins (see [design/nft-asset-spec.md](design/nft-asset-spec.md)). Set `COLLECTION_FROM_BLOCK` to the deploy block so ownership scans stay fast.
+- `NEXT_PUBLIC_COLLECTION_CHAIN` / `NEXT_PUBLIC_COLLECTION_CONTRACT` — optional override of the Shootris card contract (see [design/nft-asset-spec.md](design/nft-asset-spec.md)), with `COLLECTION_FROM_BLOCK` as its deploy block. The Sportris and SmasherDasher contracts are set in `src/app/config/collections.ts`, not by env.
 - `NEXT_PUBLIC_MILESTONE_NFT_URL` — mint page linked from the Journey stage-clear reward. Unset hides the button.
 
 Deployment target: `shootris.schmidtiest.xyz`. After deploying, re-sign the Farcaster `accountAssociation` in `public/.well-known/farcaster.json` for the new domain (the old signature is bound to the Ohara domain).

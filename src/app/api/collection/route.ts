@@ -1,18 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http, isAddress, parseAbi, parseAbiItem } from 'viem';
 import { getChainRegistry, isChainConfigured } from '@/lib/chains';
-import { parseCardToSkin, type OwnedCard } from '@/lib/skins';
-import { SHOOTRIS_CARDS, COLLECTION_CHAIN, COLLECTION_CONTRACT } from '@/app/config/onchainkit';
+import { parseCardToSkin, type CollectionKey, type OwnedCard } from '@/lib/skins';
+import { CARD_COLLECTIONS, LIVE_COLLECTIONS, collectionAt } from '@/app/config/collections';
 import { isSafePublicUrl } from '@/lib/safeUrl';
 import { isSameOrigin, withinRateLimit } from '@/lib/requestGuard';
 
-// Lists the Shootris cards a wallet holds and maps them to piece skins.
-// Works against an UNMODIFIED third-party collection (vibe.market): it only
-// uses standard ERC-721 reads plus vibe's optional rarity getter.
+// Lists the cards a wallet holds in one of our collections and maps them to
+// piece skins. Works against an UNMODIFIED third-party collection
+// (vibe.market): it only uses standard ERC-721 reads plus vibe's optional
+// rarity getter.
 //
-// POST { chain, contract, address } -> { cards: OwnedCard[] }
+// POST { collection, address } -> { cards: OwnedCard[] }
+// (older pages send { chain, contract, address } for the same thing)
 //
-// Only the configured collection, and only for our own pages. This route
+// Only our registered collections, and only for our own pages. This route
 // calls the contract's tokenURI and then fetches whatever URL comes back, so
 // accepting any contract let anyone point this server at a URL of their
 // choosing: a malware sinkhole, for instance, which is exactly what gets a
@@ -56,8 +58,8 @@ async function fetchMetadata(uri: string): Promise<{ name?: string; image?: stri
   return res.json();
 }
 
-// One wallet's card check per page load; well above that is not a player
-const COLLECTION_REQUESTS_PER_MINUTE = 20;
+// One check per collection per page load; well above that is not a player
+const COLLECTION_REQUESTS_PER_MINUTE = 30;
 
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) {
@@ -68,20 +70,19 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
-    const chainKey = typeof body.chain === 'string' ? body.chain : '';
     const address = typeof body.address === 'string' ? body.address.trim() : '';
-    const contract = typeof body.contract === 'string' ? body.contract.trim() : '';
+    const collection: CollectionKey | null =
+      typeof body.collection === 'string'
+        ? (LIVE_COLLECTIONS.find((key) => key === body.collection) ?? null)
+        : typeof body.chain === 'string' && typeof body.contract === 'string'
+          ? collectionAt(body.chain, body.contract)
+          : null;
 
-    if (!contract) {
-      // Collection not configured yet — not an error, just nothing to unlock
-      return NextResponse.json({ cards: [], configured: false });
+    if (!collection) {
+      return NextResponse.json({ error: 'Not one of our card collections' }, { status: 400 });
     }
-    if (
-      contract.toLowerCase() !== COLLECTION_CONTRACT.toLowerCase() ||
-      chainKey !== COLLECTION_CHAIN
-    ) {
-      return NextResponse.json({ error: 'Only the Shootris collection is supported' }, { status: 400 });
-    }
+    // From the registry, never from the request
+    const { chain: chainKey, contract, fromBlock } = CARD_COLLECTIONS[collection];
     const registry = getChainRegistry();
     const entry = registry[chainKey];
     if (!entry || entry.type !== 'evm') {
@@ -110,13 +111,10 @@ export async function POST(req: Request) {
     // Candidate tokens: anything that ever moved to this wallet.
     // Many public RPCs cap getLogs block ranges, so fall back to chunked
     // scanning if the single full-range query is rejected.
-    const fromBlockEnv = process.env.COLLECTION_FROM_BLOCK;
-    const isShootrisCards = contract.toLowerCase() === SHOOTRIS_CARDS.contract.toLowerCase();
-    const startBlock = fromBlockEnv
-      ? BigInt(fromBlockEnv)
-      : isShootrisCards
-        ? BigInt(SHOOTRIS_CARDS.fromBlock)
-        : BigInt(0);
+    // COLLECTION_FROM_BLOCK goes with NEXT_PUBLIC_COLLECTION_CONTRACT, which
+    // only ever replaces the Shootris contract
+    const fromBlockEnv = collection === 'shootris' ? process.env.COLLECTION_FROM_BLOCK : undefined;
+    const startBlock = BigInt(fromBlockEnv || fromBlock);
     const logFilter = {
       address: contract as `0x${string}`,
       event: transferEvent,
@@ -194,7 +192,7 @@ export async function POST(req: Request) {
 
         const meta = await fetchMetadata(String(uri));
         const name = typeof meta.name === 'string' ? meta.name : '';
-        const skin = parseCardToSkin(name, meta.attributes as never, rarity);
+        const skin = parseCardToSkin(name, meta.attributes as never, rarity, collection);
         if (!skin) continue;
 
         cards.push({
@@ -202,6 +200,7 @@ export async function POST(req: Request) {
           name,
           image: typeof meta.image === 'string' ? resolveUri(meta.image) : undefined,
           rarity,
+          collection,
           set: skin.set,
           piece: skin.piece,
         });

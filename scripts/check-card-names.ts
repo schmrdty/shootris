@@ -7,30 +7,43 @@
 //
 // 1. Real cards (scripts/card-fixtures.json) must map exactly as their Set
 //    and Piece traits say, so no parser change can strip a holder's unlock.
-// 2. Trap names that look like existing sets must unlock nothing.
+// 2. Trap names that look like an existing set must never land in it,
+//    including cards from one collection that name another's set.
 // 3. Planned cards (scripts/planned-cards.json, or a path given as the first
 //    argument) must each land on their intended set and piece, cover all
 //    seven pieces, and never put two cards on the same piece.
 
 import { readFileSync, existsSync } from 'node:fs';
-import { parseCardToSkin, PIECE_KEYS, SKIN_SETS, type PieceKey } from '../src/lib/skins.ts';
+import {
+  parseCardToSkin,
+  collectionOf,
+  PIECE_KEYS,
+  SKIN_SETS,
+  type CollectionKey,
+  type PieceKey,
+  type SkinSet,
+} from '../src/lib/skins.ts';
 
 type Traits = Record<string, string>;
 interface Card {
   name: string;
   attributes?: Traits;
-  /** What it should unlock, e.g. "sports I". Omit for "must unlock nothing". */
+  /** The contract it is minted in. Omitted: the original Shootris cards. */
+  collection?: CollectionKey;
+  /** What it should unlock, e.g. "sportris-ballgame I". Omit for "must unlock nothing". */
   intended?: string;
 }
 
 const asAttributes = (t: Traits = {}) => Object.entries(t).map(([trait_type, value]) => ({ trait_type, value }));
+const parse = (c: Card) => parseCardToSkin(c.name, asAttributes(c.attributes), undefined, c.collection ?? 'shootris');
 const show = (r: ReturnType<typeof parseCardToSkin>) => (r ? `${r.set} ${r.piece}` : 'nothing');
 const describe = (c: Card) => {
   const t = Object.entries(c.attributes ?? {})
     .filter(([k]) => ['set', 'piece', 'series', 'shape'].includes(k.toLowerCase()))
     .map(([k, v]) => `${k}=${v}`)
     .join(', ');
-  return `"${c.name}"${t ? ` [${t}]` : ''}`;
+  const from = c.collection && c.collection !== 'shootris' ? `${c.collection} ` : '';
+  return `${from}"${c.name}"${t ? ` [${t}]` : ''}`;
 };
 
 let failures = 0;
@@ -45,7 +58,7 @@ console.log('\n1. Real cards from the chain must keep mapping exactly as their t
 const fixtures = JSON.parse(readFileSync(new URL('./card-fixtures.json', import.meta.url), 'utf8')) as { cards: Card[] };
 for (const card of fixtures.cards) {
   const want = `${card.attributes!.Set.toLowerCase()} ${card.attributes!.Piece.toUpperCase()}`;
-  const got = show(parseCardToSkin(card.name, asAttributes(card.attributes)));
+  const got = show(parse(card));
   if (got === want) pass(`${describe(card)} -> ${got}`);
   else fail(`${describe(card)} -> ${got}, expected ${want}`);
 }
@@ -55,7 +68,7 @@ for (const card of fixtures.cards) {
 // (Set=Sports is a Sports card once Sports is registered), but it must never
 // land in the set it merely looks like.
 console.log('\n2. Names that resemble an existing set must never land in it');
-const traps: [Card, string][] = [
+const traps: [Card, SkinSet][] = [
   [{ name: 'Golden Boot', attributes: { Set: 'Sports', Piece: 'I' } }, 'collector'],
   [{ name: 'Sports I', attributes: { Set: 'Golden Era', Piece: 'I' } }, 'collector'],
   [{ name: 'Sports T', attributes: { Set: 'Classic Ballers', Piece: 'T' } }, 'basic'],
@@ -67,9 +80,16 @@ const traps: [Card, string][] = [
   [{ name: 'Classic Hook Shot' }, 'basic'],
   [{ name: 'Neon Hook Shot' }, 'neon'],
   [{ name: 'Gunmetal I', attributes: { Set: 'Gunmetal', Piece: 'I' } }, 'gunmetal'],
+  // Another collection's cards, labelled exactly like Shootris cards. Only the
+  // contract a card was read from decides which sets it can unlock.
+  [{ name: 'Neon I', attributes: { Set: 'Neon', Piece: 'I' }, collection: 'smasherdasher' }, 'neon'],
+  [{ name: 'Neon Lance', collection: 'smasherdasher' }, 'neon'],
+  [{ name: 'Basic T', attributes: { Set: 'Basic', Piece: 'T' }, collection: 'sportris' }, 'basic'],
+  [{ name: 'Earthen O', collection: 'sportris' }, 'earthen'],
+  [{ name: 'Collector Z', attributes: { Set: 'Collector', Piece: 'Z' }, collection: 'sportris' }, 'collector'],
 ];
 for (const [card, lookalike] of traps) {
-  const got = parseCardToSkin(card.name, asAttributes(card.attributes));
+  const got = parse(card);
   if (got?.set === lookalike) fail(`${describe(card)} -> ${show(got)}: it only looks like ${lookalike}`);
   else pass(`${describe(card)} -> ${show(got)}, not ${lookalike}`);
 }
@@ -83,16 +103,23 @@ if (!existsSync(plannedPath)) {
   const planned = JSON.parse(readFileSync(plannedPath, 'utf8')) as { cards: Card[] };
   const piecesBySet = new Map<string, Map<PieceKey, string[]>>();
   for (const card of planned.cards) {
-    const got = parseCardToSkin(card.name, asAttributes(card.attributes));
+    const got = parse(card);
     const want = card.intended?.trim().replace(/\s+/g, ' ');
     if (!want) {
       if (!got) pass(`${describe(card)} -> nothing, as intended`);
       else fail(`${describe(card)} -> ${show(got)}, but it was meant to unlock nothing`);
       continue;
     }
-    const [wantSet] = want.toLowerCase().split(' ');
-    if (!SKIN_SETS.includes(wantSet as never)) {
+    const wantSet = want.toLowerCase().split(' ')[0] as SkinSet;
+    if (!SKIN_SETS.includes(wantSet)) {
       fail(`${describe(card)}: intended set "${wantSet}" is not registered in src/lib/skins.ts`);
+      continue;
+    }
+    const mintedIn = card.collection ?? 'shootris';
+    if (collectionOf(wantSet) !== mintedIn) {
+      fail(
+        `${describe(card)}: set "${wantSet}" belongs to ${collectionOf(wantSet) ?? 'no collection'}, but the card is minted in ${mintedIn}`
+      );
       continue;
     }
     if (show(got).toLowerCase() === want.toLowerCase()) pass(`${describe(card)} -> ${show(got)}`);

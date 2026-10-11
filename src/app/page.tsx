@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,8 +13,8 @@ import { WalletConnect } from '@/components/wallet-connect';
 import { ShareOnFarcaster } from '@/components/ShareOnFarcaster';
 import { ChevronsUp, Gamepad2, Swords, Trophy, Settings, BookOpen, TriangleAlert, Sparkles, ExternalLink as ExternalLinkIcon } from 'lucide-react';
 import { ExternalLink } from '@/components/ExternalLink';
-import { SHOOTRIS_CARDS } from '@/app/config/onchainkit';
-import { TOTAL_MINTED_CARDS } from '@/lib/skins';
+import { CARD_COLLECTIONS, LIVE_COLLECTIONS } from '@/app/config/collections';
+import { cardsToComplete } from '@/lib/skins';
 import { SkinUnlockPrompt } from '@/components/SkinUnlockPrompt';
 import { ShootrisLogo } from '@/components/ShootrisLogo';
 
@@ -202,22 +202,39 @@ export default function Home() {
               <Sparkles className="h-7 w-7" aria-hidden="true" /> COLLECT THE CARDS
             </CardTitle>
             <CardDescription className="text-base font-semibold text-gray-300">
-              Collect all 7 cards of a set to unlock its piece skins in game. Collect all {TOTAL_MINTED_CARDS} to unlock every set.
+              Collect all 7 cards of a set to unlock its piece skins in game.
+              {LIVE_COLLECTIONS.map((c) =>
+                LIVE_COLLECTIONS.length > 1
+                  ? ` Collect all ${cardsToComplete(c)} ${CARD_COLLECTIONS[c].label} cards to unlock every ${CARD_COLLECTIONS[c].label} set.`
+                  : ` Collect all ${cardsToComplete(c)} to unlock every set.`
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
-            <ExternalLink
-              href={SHOOTRIS_CARDS.vibeMarketUrl}
-              className="flex items-center justify-center gap-2 rounded-lg border-2 border-yellow-500 px-4 py-3 font-bold text-yellow-200 hover:bg-yellow-500/10"
-            >
-              Open packs on vibe.market <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
-            </ExternalLink>
-            <ExternalLink
-              href={SHOOTRIS_CARDS.openSeaUrl}
-              className="flex items-center justify-center gap-2 rounded-lg border-2 border-cyan-500 px-4 py-3 font-bold text-cyan-200 hover:bg-cyan-500/10"
-            >
-              Trade cards on OpenSea <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
-            </ExternalLink>
+            {LIVE_COLLECTIONS.map((c) => {
+              const { label, vibeMarketUrl, openSeaUrl } = CARD_COLLECTIONS[c];
+              const named = LIVE_COLLECTIONS.length > 1 ? `${label} ` : '';
+              return (
+                <Fragment key={c}>
+                  {vibeMarketUrl && (
+                    <ExternalLink
+                      href={vibeMarketUrl}
+                      className="flex items-center justify-center gap-2 rounded-lg border-2 border-yellow-500 px-4 py-3 font-bold text-yellow-200 hover:bg-yellow-500/10"
+                    >
+                      Open {named}packs on vibe.market <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
+                    </ExternalLink>
+                  )}
+                  {openSeaUrl && (
+                    <ExternalLink
+                      href={openSeaUrl}
+                      className="flex items-center justify-center gap-2 rounded-lg border-2 border-cyan-500 px-4 py-3 font-bold text-cyan-200 hover:bg-cyan-500/10"
+                    >
+                      Trade {named}cards on OpenSea <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
+                    </ExternalLink>
+                  )}
+                </Fragment>
+              );
+            })}
           </CardContent>
         </Card>
 

@@ -1,12 +1,12 @@
 {
-  "_about": "Copy to planned-cards.json and list every card of a new set exactly as it will be minted: its name and its Set/Piece traits. 'intended' is what it should unlock. Then run: npm run check:cards. The set key (here 'sports') must first be registered in src/lib/skins.ts.",
+  "_about": "Copy to planned-cards.json and list every card of a new set exactly as it will be minted: its name, its Set/Piece traits, and the collection (contract) it is minted in. 'intended' is what it should unlock. Then run: npm run check:cards. The set key (here 'sportris-ballgame') must first be registered in src/lib/skins.ts with collection 'sportris'.",
   "cards": [
-    { "name": "Sports Dunk",     "attributes": { "Set": "Sports", "Piece": "I" }, "intended": "sports I" },
-    { "name": "Sports Hat Trick","attributes": { "Set": "Sports", "Piece": "O" }, "intended": "sports O" },
-    { "name": "Sports Slam",     "attributes": { "Set": "Sports", "Piece": "T" }, "intended": "sports T" },
-    { "name": "Sports Curveball","attributes": { "Set": "Sports", "Piece": "S" }, "intended": "sports S" },
-    { "name": "Sports Spike",    "attributes": { "Set": "Sports", "Piece": "Z" }, "intended": "sports Z" },
-    { "name": "Sports Hook Shot","attributes": { "Set": "Sports", "Piece": "J" }, "intended": "sports J" },
-    { "name": "Sports Home Run", "attributes": { "Set": "Sports", "Piece": "L" }, "intended": "sports L" }
+    { "name": "Ball Game Baseball",    "collection": "sportris", "attributes": { "Set": "Ball Game", "Piece": "I" }, "intended": "sportris-ballgame I" },
+    { "name": "Ball Game Basketball",  "collection": "sportris", "attributes": { "Set": "Ball Game", "Piece": "O" }, "intended": "sportris-ballgame O" },
+    { "name": "Ball Game Soccer Ball", "collection": "sportris", "attributes": { "Set": "Ball Game", "Piece": "T" }, "intended": "sportris-ballgame T" },
+    { "name": "Ball Game Football",    "collection": "sportris", "attributes": { "Set": "Ball Game", "Piece": "S" }, "intended": "sportris-ballgame S" },
+    { "name": "Ball Game Volleyball",  "collection": "sportris", "attributes": { "Set": "Ball Game", "Piece": "Z" }, "intended": "sportris-ballgame Z" },
+    { "name": "Ball Game Tennis Ball", "collection": "sportris", "attributes": { "Set": "Ball Game", "Piece": "J" }, "intended": "sportris-ballgame J" },
+    { "name": "Ball Game Softball",    "collection": "sportris", "attributes": { "Set": "Ball Game", "Piece": "L" }, "intended": "sportris-ballgame L" }
   ]
 }

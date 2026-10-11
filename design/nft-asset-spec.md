@@ -121,9 +121,15 @@ For a new set, register it in `src/lib/skins.ts` and run
 `npm run check:cards` against the planned card list **before minting**
 (see `public/skins/README.md`).
 
+**New collections (Sportris, SmasherDasher) must use the `Set` and `Piece`
+traits on every card.** Each is its own contract, and a card only unlocks
+sets of the collection it was minted in, so set names never collide across
+collections. Plan 2 to 4 sets per collection: 7 cards per set, so 14, 21 or
+28 cards.
+
 ---
 
-## 5. The four sets (28 cards)
+## 5. The four Shootris sets (28 cards)
 
 | Set | Cards | Direction |
 |---|---|---|

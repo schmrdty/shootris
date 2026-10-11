@@ -47,7 +47,9 @@ corners blend into a board.
 ## Adding a new set
 
 1. Add the set to `SkinSet` and to `SET_DEFINITIONS` in `src/lib/skins.ts`
-   (one entry: label, the exact `Set` trait value, any piece nicknames).
+   (one entry: label, its `collection`, the exact `Set` trait value, any
+   piece nicknames). Prefix keys of new collections with the collection:
+   `sportris-ballgame`, `smasherdasher-tophat`.
 2. Put its seven tiles in `public/skins/<set>/`.
 3. **Before minting**, list every planned card in
    `scripts/planned-cards.json` (copy the `.example.json`) and run
@@ -55,8 +57,21 @@ corners blend into a board.
    piece, two cards claim one piece, or a piece has no card.
 
 Cards are identified by their `Set` and `Piece` traits, matched exactly.
-Avoid set names that resemble an existing one ("Golden…", "Classic…",
-"Earth…"): the parser no longer guesses, but players will.
+**Every card must carry both traits on vibe.market.** Avoid set names that
+resemble an existing one ("Golden…", "Classic…", "Earth…"): the parser no
+longer guesses, but players will.
+
+## Collections (Shootris, Sportris, SmasherDasher)
+
+Each collection is its own vibe.market contract, listed in
+`src/app/config/collections.ts`. A card only ever unlocks sets of the
+collection it was minted in, so a SmasherDasher set may reuse a name like
+"Neon" without touching the Shootris Neon set.
+
+A new collection stays hidden until launch day. To launch it, fill in its
+`contract` and `fromBlock` (the contract's deploy block) and its vibe.market
+and OpenSea links in `collections.ts`, then deploy. Its sets, progress and
+links then appear in Settings and on the home page.
 
 ## Why only 7 per set
 
