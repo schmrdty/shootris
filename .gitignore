@@ -48,3 +48,6 @@ cX/
 # hundreds of megabytes, and never served. Only the encoded files in
 # public/music ship.
 /scripts/audio/wav
+
+# State-mix previews from scripts/audio/render/preview.py — listening copies
+/scripts/audio/preview

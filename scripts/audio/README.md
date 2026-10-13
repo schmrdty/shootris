@@ -119,6 +119,35 @@ Loop points are kept in **seconds**, not samples: `decodeAudioData` may
 resample to the AudioContext's rate, which preserves durations but not sample
 counts.
 
+## Listen to it
+
+A single stem on its own is not the soundtrack — the game plays all eight at
+once at the mixing matrix's gains. `preview.py` bounces a state's actual mix to
+one file, reading the gains from the pack metadata so a preview cannot drift
+from what the engine does:
+
+```bash
+python3 scripts/audio/render/preview.py                            # every state, both packs
+python3 scripts/audio/render/preview.py --pack zen --state calm
+python3 scripts/audio/render/preview.py --pack arcade --bpm 145 --state danger
+python3 scripts/audio/render/preview.py --solo DRUMS --pack zen    # one stem, alone
+python3 scripts/audio/render/preview.py --master 0.9               # louder than the game
+```
+
+Output lands in `scripts/audio/preview/` (git-ignored) as Ogg Opus. It needs
+the WAV masters, so run `audio:render` first. `--master` defaults to 0.55, the
+engine's own master gain, which makes a preview as loud as the game rather than
+hotter; raising it changes nothing about the balance between stems.
+
+To hear it adapting rather than one state at a time, run the game — `pnpm dev`,
+then Single Player with music on. The soundtrack starts on your first click or
+keypress and follows the board from there. The in-game button under the mute
+control switches packs mid-run, which crossfades at the next loop boundary.
+
+Individual stems are also just files: `public/music/<pack>/<bpm>/STEM_0N_<NAME>.ogg`
+plays in any browser or media player, and `ffplay`, VLC and QuickTime all open
+the WAV masters directly.
+
 ## The packs
 
 |  | Arcade | Midnight Tea House |
