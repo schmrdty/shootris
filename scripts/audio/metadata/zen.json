@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "pack": "zen",
+  "display_name": "Midnight Tea House",
+  "codename": "mitty",
+  "key": "A minor",
+  "scales": {
+    "a_natural_minor": {
+      "display_name": "A natural minor",
+      "pitch_classes": [
+        9,
+        11,
+        0,
+        2,
+        4,
+        5,
+        7
+      ]
+    },
+    "a_minor_pentatonic": {
+      "display_name": "A minor pentatonic",
+      "pitch_classes": [
+        9,
+        0,
+        2,
+        4,
+        7
+      ]
+    },
+    "a_hirajoshi": {
+      "display_name": "A hirajoshi-inspired",
+      "pitch_classes": [
+        9,
+        11,
+        0,
+        4,
+        5
+      ]
+    }
+  },
+  "bpm_tiers": [
+    84
+  ],
+  "bars_per_loop": 16,
+  "time_signature": [
+    4,
+    4
+  ],
+  "sample_rate": 48000,
+  "harmony": [
+    "Am7",
+    "Am7",
+    "Dm7",
+    "Dm7",
+    "Fmaj7",
+    "Fmaj7",
+    "Em7",
+    "Em7",
+    "Am7",
+    "Am7",
+    "Dm9",
+    "Dm9",
+    "Cmaj7",
+    "Cmaj7",
+    "Em7",
+    "Em7"
+  ],
+  "loops": {
+    "84": {
+      "bpm": 84,
+      "bar_seconds": 2.857142857142857,
+      "loop_seconds": 45.71429166666667,
+      "loop_samples": 2194286,
+      "url_dir": "/music/zen/84"
+    }
+  },
+  "formats": [
+    {
+      "id": "opus",
+      "ext": "ogg",
+      "mime": "audio/ogg; codecs=opus",
+      "codec": "opus",
+      "bitrate_kbps": 80,
+      "decode_offset_samples": 0,
+      "decoded_length_samples": {
+        "84": 2194286
+      }
+    },
+    {
+      "id": "aac",
+      "ext": "m4a",
+      "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+      "codec": "aac",
+      "bitrate_kbps": 96,
+      "decode_offset_samples": 0,
+      "decoded_length_samples": {
+        "84": 2194432
+      }
+    }
+  ],
+  "stems": [
+    {
+      "id": "STEM_01",
+      "name": "BASS",
+      "index": 1,
+      "role": "warm sub, tape bass, finger bass at 50-150 Hz \u2014 the anchor",
+      "always_active": true,
+      "audible_in_calm": true,
+      "url_template": "/music/zen/{bpm}/STEM_01_BASS.{ext}",
+      "scales": [
+        "a_natural_minor"
+      ]
+    },
+    {
+      "id": "STEM_02",
+      "name": "DRUMS",
+      "index": 2,
+      "role": "boom-bap kick, dusty snare, soft hats",
+      "always_active": true,
+      "audible_in_calm": true,
+      "url_template": "/music/zen/{bpm}/STEM_02_DRUMS.{ext}",
+      "scales": []
+    },
+    {
+      "id": "STEM_03",
+      "name": "ROOM",
+      "index": 3,
+      "role": "vinyl crackle, tape noise, room textures at very low volume",
+      "always_active": true,
+      "audible_in_calm": true,
+      "url_template": "/music/zen/{bpm}/STEM_03_ROOM.{ext}",
+      "scales": [
+        "a_natural_minor"
+      ]
+    },
+    {
+      "id": "STEM_04",
+      "name": "MOTION",
+      "index": 4,
+      "role": "koto, pipa and guzheng-inspired plucks",
+      "always_active": false,
+      "audible_in_calm": true,
+      "url_template": "/music/zen/{bpm}/STEM_04_MOTION.{ext}",
+      "scales": [
+        "a_minor_pentatonic"
+      ],
+      "phrase_rules": {
+        "max_phrase_notes": 5,
+        "phrase_gap_beats": 1.0
+      }
+    },
+    {
+      "id": "STEM_05",
+      "name": "CHORDS",
+      "index": 5,
+      "role": "Rhodes, electric piano, tape-warm keys",
+      "always_active": true,
+      "audible_in_calm": true,
+      "url_template": "/music/zen/{bpm}/STEM_05_CHORDS.{ext}",
+      "scales": [],
+      "follows_harmony": true
+    },
+    {
+      "id": "STEM_06",
+      "name": "THEME",
+      "index": 6,
+      "role": "the Mitty melody \u2014 sparse, rare, a reward",
+      "always_active": false,
+      "audible_in_calm": false,
+      "url_template": "/music/zen/{bpm}/STEM_06_THEME.{ext}",
+      "scales": [
+        "a_minor_pentatonic",
+        "a_hirajoshi"
+      ],
+      "phrase_rules": {
+        "max_phrase_notes": 5,
+        "min_bars_between_phrases": 8,
+        "phrase_gap_beats": 2.0
+      }
+    },
+    {
+      "id": "STEM_07",
+      "name": "DANGER",
+      "index": 7,
+      "role": "danger by subtraction: lower bass octave, filtered drone, sparse percussion",
+      "always_active": false,
+      "audible_in_calm": false,
+      "url_template": "/music/zen/{bpm}/STEM_07_DANGER.{ext}",
+      "scales": [
+        "a_natural_minor"
+      ]
+    },
+    {
+      "id": "STEM_08",
+      "name": "RECOVERY",
+      "index": 8,
+      "role": "wind bells, soft inversion chord, short plucked flourish",
+      "always_active": false,
+      "audible_in_calm": false,
+      "url_template": "/music/zen/{bpm}/STEM_08_RECOVERY.{ext}",
+      "scales": [
+        "a_minor_pentatonic"
+      ]
+    }
+  ],
+  "states": [
+    "danger",
+    "recovery",
+    "intense",
+    "focus",
+    "flow",
+    "calm"
+  ],
+  "mix_matrix": {
+    "danger": {
+      "STEM_01": 1.0,
+      "STEM_02": 0.6,
+      "STEM_03": 1.0,
+      "STEM_04": 0.0,
+      "STEM_05": 0.3,
+      "STEM_06": 0.0,
+      "STEM_07": 1.0,
+      "STEM_08": 0.0
+    },
+    "recovery": {
+      "STEM_01": 1.0,
+      "STEM_02": 0.8,
+      "STEM_03": 1.0,
+      "STEM_04": 0.3,
+      "STEM_05": 0.8,
+      "STEM_06": 0.1,
+      "STEM_07": 0.0,
+      "STEM_08": 1.0
+    },
+    "intense": {
+      "STEM_01": 1.0,
+      "STEM_02": 1.0,
+      "STEM_03": 1.0,
+      "STEM_04": 0.9,
+      "STEM_05": 1.0,
+      "STEM_06": 0.6,
+      "STEM_07": 0.3,
+      "STEM_08": 0.0
+    },
+    "focus": {
+      "STEM_01": 1.0,
+      "STEM_02": 1.0,
+      "STEM_03": 1.0,
+      "STEM_04": 0.7,
+      "STEM_05": 1.0,
+      "STEM_06": 0.5,
+      "STEM_07": 0.0,
+      "STEM_08": 0.0
+    },
+    "flow": {
+      "STEM_01": 1.0,
+      "STEM_02": 1.0,
+      "STEM_03": 1.0,
+      "STEM_04": 0.5,
+      "STEM_05": 0.8,
+      "STEM_06": 0.2,
+      "STEM_07": 0.0,
+      "STEM_08": 0.0
+    },
+    "calm": {
+      "STEM_01": 1.0,
+      "STEM_02": 0.8,
+      "STEM_03": 1.0,
+      "STEM_04": 0.2,
+      "STEM_05": 0.7,
+      "STEM_06": 0.0,
+      "STEM_07": 0.0,
+      "STEM_08": 0.0
+    }
+  }
+}

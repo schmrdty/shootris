@@ -1,0 +1,298 @@
+{
+  "schema_version": 1,
+  "pack": "arcade",
+  "display_name": "Arcade",
+  "key": "A minor",
+  "scales": {
+    "a_natural_minor": {
+      "display_name": "A natural minor",
+      "pitch_classes": [
+        9,
+        11,
+        0,
+        2,
+        4,
+        5,
+        7
+      ]
+    }
+  },
+  "bpm_tiers": [
+    95,
+    105,
+    115,
+    125,
+    135,
+    145
+  ],
+  "bars_per_loop": 16,
+  "time_signature": [
+    4,
+    4
+  ],
+  "sample_rate": 48000,
+  "harmony": [
+    "Am",
+    "F",
+    "C",
+    "G",
+    "Am",
+    "G",
+    "F",
+    "E",
+    "Am",
+    "C",
+    "G",
+    "Em",
+    "Am",
+    "F",
+    "C",
+    "G"
+  ],
+  "loops": {
+    "95": {
+      "bpm": 95,
+      "bar_seconds": 2.526315789473684,
+      "loop_seconds": 40.4210625,
+      "loop_samples": 1940211,
+      "url_dir": "/music/arcade/95"
+    },
+    "105": {
+      "bpm": 105,
+      "bar_seconds": 2.2857142857142856,
+      "loop_seconds": 36.5714375,
+      "loop_samples": 1755429,
+      "url_dir": "/music/arcade/105"
+    },
+    "115": {
+      "bpm": 115,
+      "bar_seconds": 2.0869565217391304,
+      "loop_seconds": 33.3913125,
+      "loop_samples": 1602783,
+      "url_dir": "/music/arcade/115"
+    },
+    "125": {
+      "bpm": 125,
+      "bar_seconds": 1.92,
+      "loop_seconds": 30.72,
+      "loop_samples": 1474560,
+      "url_dir": "/music/arcade/125"
+    },
+    "135": {
+      "bpm": 135,
+      "bar_seconds": 1.7777777777777777,
+      "loop_seconds": 28.4444375,
+      "loop_samples": 1365333,
+      "url_dir": "/music/arcade/135"
+    },
+    "145": {
+      "bpm": 145,
+      "bar_seconds": 1.6551724137931034,
+      "loop_seconds": 26.48275,
+      "loop_samples": 1271172,
+      "url_dir": "/music/arcade/145"
+    }
+  },
+  "formats": [
+    {
+      "id": "opus",
+      "ext": "ogg",
+      "mime": "audio/ogg; codecs=opus",
+      "codec": "opus",
+      "bitrate_kbps": 80,
+      "decode_offset_samples": 0,
+      "decoded_length_samples": {
+        "95": 1940211,
+        "105": 1755429,
+        "115": 1602783,
+        "125": 1474560,
+        "135": 1365333,
+        "145": 1271172
+      }
+    },
+    {
+      "id": "aac",
+      "ext": "m4a",
+      "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+      "codec": "aac",
+      "bitrate_kbps": 96,
+      "decode_offset_samples": 0,
+      "decoded_length_samples": {
+        "95": 1940480,
+        "105": 1756160,
+        "115": 1603584,
+        "125": 1474560,
+        "135": 1366016,
+        "145": 1271808
+      }
+    }
+  ],
+  "stems": [
+    {
+      "id": "STEM_01",
+      "name": "BASS",
+      "index": 1,
+      "role": "sub bass, synth bass, rhythmic pulse",
+      "always_active": true,
+      "audible_in_calm": true,
+      "url_template": "/music/arcade/{bpm}/STEM_01_BASS.{ext}",
+      "scales": [
+        "a_natural_minor"
+      ]
+    },
+    {
+      "id": "STEM_02",
+      "name": "DRUMS",
+      "index": 2,
+      "role": "electronic drums; complexity rises with the BPM tier",
+      "always_active": true,
+      "audible_in_calm": true,
+      "url_template": "/music/arcade/{bpm}/STEM_02_DRUMS.{ext}",
+      "scales": []
+    },
+    {
+      "id": "STEM_03",
+      "name": "ROOM",
+      "index": 3,
+      "role": "electronic ambience, filtered space effects",
+      "always_active": true,
+      "audible_in_calm": true,
+      "url_template": "/music/arcade/{bpm}/STEM_03_ROOM.{ext}",
+      "scales": [
+        "a_natural_minor"
+      ]
+    },
+    {
+      "id": "STEM_04",
+      "name": "MOTION",
+      "index": 4,
+      "role": "arpeggiators and short synth plucks \u2014 movement",
+      "always_active": false,
+      "audible_in_calm": true,
+      "url_template": "/music/arcade/{bpm}/STEM_04_MOTION.{ext}",
+      "scales": [],
+      "follows_harmony": true
+    },
+    {
+      "id": "STEM_05",
+      "name": "CHORDS",
+      "index": 5,
+      "role": "pads and atmospheric synths \u2014 harmonic continuity",
+      "always_active": true,
+      "audible_in_calm": true,
+      "url_template": "/music/arcade/{bpm}/STEM_05_CHORDS.{ext}",
+      "scales": [],
+      "follows_harmony": true
+    },
+    {
+      "id": "STEM_06",
+      "name": "THEME",
+      "index": 6,
+      "role": "the main Shootris melody, sparse and never continuous",
+      "always_active": false,
+      "audible_in_calm": false,
+      "url_template": "/music/arcade/{bpm}/STEM_06_THEME.{ext}",
+      "scales": [
+        "a_natural_minor"
+      ],
+      "phrase_rules": {
+        "max_phrase_notes": 6,
+        "min_bars_between_phrases": 4,
+        "phrase_gap_beats": 1.5
+      }
+    },
+    {
+      "id": "STEM_07",
+      "name": "DANGER",
+      "index": 7,
+      "role": "dark synth pulse, filtered distortion, fast hats \u2014 urgency",
+      "always_active": false,
+      "audible_in_calm": false,
+      "url_template": "/music/arcade/{bpm}/STEM_07_DANGER.{ext}",
+      "scales": [
+        "a_natural_minor"
+      ]
+    },
+    {
+      "id": "STEM_08",
+      "name": "RECOVERY",
+      "index": 8,
+      "role": "warm pads, major-colour inversions, soft release \u2014 relief",
+      "always_active": false,
+      "audible_in_calm": false,
+      "url_template": "/music/arcade/{bpm}/STEM_08_RECOVERY.{ext}",
+      "scales": [],
+      "follows_harmony": true
+    }
+  ],
+  "states": [
+    "danger",
+    "recovery",
+    "intense",
+    "focus",
+    "flow",
+    "calm"
+  ],
+  "mix_matrix": {
+    "danger": {
+      "STEM_01": 1.0,
+      "STEM_02": 0.6,
+      "STEM_03": 1.0,
+      "STEM_04": 0.0,
+      "STEM_05": 0.3,
+      "STEM_06": 0.0,
+      "STEM_07": 1.0,
+      "STEM_08": 0.0
+    },
+    "recovery": {
+      "STEM_01": 1.0,
+      "STEM_02": 0.8,
+      "STEM_03": 1.0,
+      "STEM_04": 0.3,
+      "STEM_05": 0.8,
+      "STEM_06": 0.1,
+      "STEM_07": 0.0,
+      "STEM_08": 1.0
+    },
+    "intense": {
+      "STEM_01": 1.0,
+      "STEM_02": 1.0,
+      "STEM_03": 1.0,
+      "STEM_04": 0.9,
+      "STEM_05": 1.0,
+      "STEM_06": 0.6,
+      "STEM_07": 0.3,
+      "STEM_08": 0.0
+    },
+    "focus": {
+      "STEM_01": 1.0,
+      "STEM_02": 1.0,
+      "STEM_03": 1.0,
+      "STEM_04": 0.7,
+      "STEM_05": 1.0,
+      "STEM_06": 0.5,
+      "STEM_07": 0.0,
+      "STEM_08": 0.0
+    },
+    "flow": {
+      "STEM_01": 1.0,
+      "STEM_02": 1.0,
+      "STEM_03": 1.0,
+      "STEM_04": 0.5,
+      "STEM_05": 0.8,
+      "STEM_06": 0.2,
+      "STEM_07": 0.0,
+      "STEM_08": 0.0
+    },
+    "calm": {
+      "STEM_01": 1.0,
+      "STEM_02": 0.8,
+      "STEM_03": 1.0,
+      "STEM_04": 0.2,
+      "STEM_05": 0.7,
+      "STEM_06": 0.0,
+      "STEM_07": 0.0,
+      "STEM_08": 0.0
+    }
+  }
+}
