@@ -25,6 +25,13 @@ export interface GameState {
   lastClearedRows: number[];
   /** Monotonic counter bumped whenever lines clear, so the UI can retrigger. */
   clearEvent: number;
+  /** Pieces locked this run. The soundtrack derives its piece rate from this. */
+  piecesPlaced: number;
+  /**
+   * Consecutive locks that cleared at least one line; a lock that clears none
+   * resets it. The soundtrack's Flow and Focus states read this.
+   */
+  combo: number;
 }
 
 export interface PvpGameState {

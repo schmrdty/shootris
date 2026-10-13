@@ -1,0 +1,218 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shootris.schmidtiest.xyz/schemas/adaptive-audio-pack.json",
+  "title": "Shootris adaptive audio pack",
+  "description": "Describes one adaptive soundtrack pack: its musical identity, its loop geometry per BPM, its eight synchronized stems, and the target gain of each stem in each audio state. Consumed by lib/audio/engine.ts at runtime and by scripts/audio/tests offline.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "pack",
+    "display_name",
+    "key",
+    "scales",
+    "bpm_tiers",
+    "bars_per_loop",
+    "time_signature",
+    "sample_rate",
+    "loops",
+    "formats",
+    "stems",
+    "states",
+    "mix_matrix"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "pack": {
+      "type": "string",
+      "description": "Stable pack id, also the public URL segment.",
+      "enum": ["arcade", "zen"]
+    },
+    "display_name": { "type": "string", "minLength": 1 },
+    "codename": {
+      "type": "string",
+      "description": "Internal name, where the pack has one (zen is codenamed mitty)."
+    },
+    "key": {
+      "type": "string",
+      "description": "Tonal centre and mode, e.g. 'A minor'.",
+      "minLength": 1
+    },
+    "scales": {
+      "type": "object",
+      "description": "Named pitch-class sets this pack is allowed to use. Keys are scale ids referenced by stems[].scales; values are pitch classes as semitone offsets from C (0-11).",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["display_name", "pitch_classes"],
+        "properties": {
+          "display_name": { "type": "string" },
+          "pitch_classes": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0, "maximum": 11 },
+            "minItems": 1,
+            "maxItems": 12,
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "bpm_tiers": {
+      "type": "array",
+      "description": "Every BPM a full stem set exists for, ascending. A fixed-tempo pack has exactly one entry.",
+      "items": { "type": "integer", "minimum": 40, "maximum": 300 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "bars_per_loop": { "const": 16 },
+    "time_signature": {
+      "type": "array",
+      "description": "[beats_per_bar, beat_unit].",
+      "items": { "type": "integer", "minimum": 1 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "sample_rate": {
+      "type": "integer",
+      "description": "Sample rate of the WAV masters and of every loop_samples figure below.",
+      "enum": [44100, 48000]
+    },
+    "harmony": {
+      "type": "array",
+      "description": "One chord symbol per bar of the loop (length == bars_per_loop). Chord stems are validated against this.",
+      "items": { "type": "string" }
+    },
+    "loops": {
+      "type": "object",
+      "description": "Loop geometry per BPM tier, keyed by the BPM as a string.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bpm", "bar_seconds", "loop_seconds", "loop_samples", "url_dir"],
+        "properties": {
+          "bpm": { "type": "integer", "minimum": 40, "maximum": 300 },
+          "bar_seconds": { "type": "number", "exclusiveMinimum": 0 },
+          "loop_seconds": {
+            "type": "number",
+            "description": "loop_samples / sample_rate — the authoritative loopEnd for the engine, so the value is exactly sample-aligned.",
+            "exclusiveMinimum": 0
+          },
+          "loop_samples": {
+            "type": "integer",
+            "description": "Length of every stem in this set, in samples at sample_rate. Identical across all eight stems.",
+            "exclusiveMinimum": 0
+          },
+          "url_dir": {
+            "type": "string",
+            "description": "Public directory holding this set's encoded stems."
+          }
+        }
+      }
+    },
+    "formats": {
+      "type": "array",
+      "description": "Encoded browser formats, in preference order. The engine takes the first one the browser can decode.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "ext", "mime", "codec"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "ext": { "type": "string", "pattern": "^[a-z0-9]+$" },
+          "mime": {
+            "type": "string",
+            "description": "Passed to HTMLMediaElement.canPlayType for the capability probe."
+          },
+          "codec": { "type": "string" },
+          "bitrate_kbps": { "type": "integer", "exclusiveMinimum": 0 },
+          "decode_offset_samples": {
+            "type": "integer",
+            "description": "Samples of codec priming a spec-compliant decoder prepends to the loop. Added to loopStart/loopEnd by the engine. 0 for sample-exact codecs.",
+            "minimum": 0
+          },
+          "decoded_length_samples": {
+            "type": "object",
+            "description": "Measured decoded length per BPM tier, keyed by BPM string. Test 9 compares this against loop_samples.",
+            "additionalProperties": { "type": "integer", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    },
+    "stems": {
+      "type": "array",
+      "description": "Exactly eight stems, in STEM_01..STEM_08 order.",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "index", "always_active", "url_template", "role"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^STEM_0[1-8]$" },
+          "name": {
+            "type": "string",
+            "enum": ["BASS", "DRUMS", "ROOM", "MOTION", "CHORDS", "THEME", "DANGER", "RECOVERY"]
+          },
+          "index": { "type": "integer", "minimum": 1, "maximum": 8 },
+          "role": { "type": "string", "minLength": 1 },
+          "always_active": {
+            "type": "boolean",
+            "description": "True when the stem has a non-zero target gain in every state, so the engine never lets it fall silent."
+          },
+          "audible_in_calm": {
+            "type": "boolean",
+            "description": "True when the Calm mix needs this stem. The engine loads these first so music starts fast."
+          },
+          "url_template": {
+            "type": "string",
+            "description": "Public URL with {bpm} and {ext} placeholders, e.g. /music/zen/{bpm}/STEM_01_BASS.{ext}."
+          },
+          "scales": {
+            "type": "array",
+            "description": "Scale ids from scales[] this stem's pitched notes must belong to. A stem with phrase-level scale switching lists several; each phrase must fit one of them entirely. Omitted or empty means the stem is unpitched (drums/noise) or validated against harmony instead.",
+            "items": { "type": "string" }
+          },
+          "follows_harmony": {
+            "type": "boolean",
+            "description": "True when notes are validated against the per-bar chord in harmony[] rather than against scales[]."
+          },
+          "phrase_rules": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Melodic constraints enforced by the offline tests.",
+            "properties": {
+              "max_phrase_notes": { "type": "integer", "exclusiveMinimum": 0 },
+              "min_bars_between_phrases": { "type": "integer", "exclusiveMinimum": 0 },
+              "phrase_gap_beats": {
+                "type": "number",
+                "description": "A rest of at least this many beats separates two phrases.",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "states": {
+      "type": "array",
+      "description": "Audio state ids, in the state machine's evaluation (priority) order.",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "mix_matrix": {
+      "type": "object",
+      "description": "Target gain per state per stem: mix_matrix[state][STEM_ID] in 0..1.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 8,
+        "maxProperties": 8,
+        "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 },
+        "propertyNames": { "pattern": "^STEM_0[1-8]$" }
+      }
+    }
+  }
+}

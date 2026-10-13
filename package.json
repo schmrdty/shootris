@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "check:cards": "node --experimental-strip-types --no-warnings scripts/check-card-names.ts"
+    "check:cards": "node --experimental-strip-types --no-warnings scripts/check-card-names.ts",
+    "audio:generate": "python3 scripts/audio/gen/generate_all.py && python3 scripts/audio/gen/build_metadata.py",
+    "audio:render": "python3 scripts/audio/render/render.py",
+    "test:audio:state": "node --experimental-strip-types --test src/lib/audio/stateMachine.test.ts src/lib/audio/boardStats.test.ts",
+    "test:audio:midi": "python3 scripts/audio/tests/test_midi.py",
+    "test:audio:render": "python3 scripts/audio/tests/test_audio.py",
+    "test:audio": "node --experimental-strip-types --test src/lib/audio/stateMachine.test.ts src/lib/audio/boardStats.test.ts && python3 scripts/audio/tests/test_midi.py && python3 scripts/audio/tests/test_audio.py"
   },
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.2",

@@ -21,6 +21,8 @@ export function createInitialGameState(): GameState {
     moveSpeed: INITIAL_MOVE_SPEED,
     lastClearedRows: [],
     clearEvent: 0,
+    piecesPlaced: 0,
+    combo: 0,
   };
 }
 
@@ -273,6 +275,9 @@ function lockPiece(state: GameState): GameState {
     level: newLevel,
     moveSpeed: newMoveSpeed,
     score: newScore,
+    piecesPlaced: state.piecesPlaced + 1,
+    // A lock that cleared nothing breaks the chain
+    combo: linesCleared > 0 ? state.combo + 1 : 0,
   };
 
   return spawnNewPiece(newState);

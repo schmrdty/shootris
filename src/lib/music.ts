@@ -57,3 +57,63 @@ export function useMusicPreference(serverValue?: boolean, persist?: (on: boolean
 
   return [musicOn, setMusicOn] as const;
 }
+
+// --- which soundtrack pack plays -------------------------------------------
+// Arcade is the default; Zen (Midnight Tea House) is the alternative. Stored
+// next to the on/off preference so a device remembers both.
+
+export type MusicPack = 'arcade' | 'zen';
+
+export const MUSIC_PACKS: readonly MusicPack[] = ['arcade', 'zen'];
+
+export const MUSIC_PACK_LABELS: Record<MusicPack, string> = {
+  arcade: 'Arcade',
+  zen: 'Midnight Tea House',
+};
+
+export const MUSIC_PACK_BLURBS: Record<MusicPack, string> = {
+  arcade: 'Electronic, hypnotic, speeds up as the stages climb.',
+  zen: 'Lo-fi tea house at 84 BPM. Calm, for concentration.',
+};
+
+const PACK_KEY = 'shootris_music_pack';
+const packListeners = new Set<() => void>();
+let packMemory: MusicPack | null = null;
+
+function isPack(value: unknown): value is MusicPack {
+  return value === 'arcade' || value === 'zen';
+}
+
+function readPack(): MusicPack | null {
+  try {
+    const stored = localStorage.getItem(PACK_KEY);
+    return isPack(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function subscribePack(listener: () => void) {
+  packListeners.add(listener);
+  return () => packListeners.delete(listener);
+}
+
+function packSnapshot(): MusicPack {
+  return packMemory ?? readPack() ?? 'arcade';
+}
+
+export function useMusicPack() {
+  const pack = useSyncExternalStore(subscribePack, packSnapshot, () => 'arcade' as MusicPack);
+
+  const setPack = useCallback((next: MusicPack) => {
+    packMemory = next;
+    try {
+      localStorage.setItem(PACK_KEY, next);
+    } catch {
+      // preference just won't persist
+    }
+    packListeners.forEach((listener) => listener());
+  }, []);
+
+  return [pack, setPack] as const;
+}
