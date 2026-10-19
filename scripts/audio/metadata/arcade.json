@@ -55,42 +55,48 @@
       "bar_seconds": 2.526315789473684,
       "loop_seconds": 40.4210625,
       "loop_samples": 1940211,
-      "url_dir": "/music/arcade/95"
+      "rev": "8529b4e5b91c",
+      "url_dir": "/music/arcade/95/{rev}"
     },
     "105": {
       "bpm": 105,
       "bar_seconds": 2.2857142857142856,
       "loop_seconds": 36.5714375,
       "loop_samples": 1755429,
-      "url_dir": "/music/arcade/105"
+      "rev": "d958b849e0fe",
+      "url_dir": "/music/arcade/105/{rev}"
     },
     "115": {
       "bpm": 115,
       "bar_seconds": 2.0869565217391304,
       "loop_seconds": 33.3913125,
       "loop_samples": 1602783,
-      "url_dir": "/music/arcade/115"
+      "rev": "7fbc7879fc89",
+      "url_dir": "/music/arcade/115/{rev}"
     },
     "125": {
       "bpm": 125,
       "bar_seconds": 1.92,
       "loop_seconds": 30.72,
       "loop_samples": 1474560,
-      "url_dir": "/music/arcade/125"
+      "rev": "cb70cfcfe5ba",
+      "url_dir": "/music/arcade/125/{rev}"
     },
     "135": {
       "bpm": 135,
       "bar_seconds": 1.7777777777777777,
       "loop_seconds": 28.4444375,
       "loop_samples": 1365333,
-      "url_dir": "/music/arcade/135"
+      "rev": "9f0b0e255bc0",
+      "url_dir": "/music/arcade/135/{rev}"
     },
     "145": {
       "bpm": 145,
       "bar_seconds": 1.6551724137931034,
       "loop_seconds": 26.48275,
       "loop_samples": 1271172,
-      "url_dir": "/music/arcade/145"
+      "rev": "d1ddcfb899e3",
+      "url_dir": "/music/arcade/145/{rev}"
     }
   },
   "formats": [
@@ -135,7 +141,7 @@
       "role": "sub bass, synth bass, rhythmic pulse",
       "always_active": true,
       "audible_in_calm": true,
-      "url_template": "/music/arcade/{bpm}/STEM_01_BASS.{ext}",
+      "url_template": "/music/arcade/{bpm}/{rev}/STEM_01_BASS.{ext}",
       "scales": [
         "a_natural_minor"
       ]
@@ -147,7 +153,7 @@
       "role": "electronic drums; complexity rises with the BPM tier",
       "always_active": true,
       "audible_in_calm": true,
-      "url_template": "/music/arcade/{bpm}/STEM_02_DRUMS.{ext}",
+      "url_template": "/music/arcade/{bpm}/{rev}/STEM_02_DRUMS.{ext}",
       "scales": []
     },
     {
@@ -157,7 +163,7 @@
       "role": "electronic ambience, filtered space effects",
       "always_active": true,
       "audible_in_calm": true,
-      "url_template": "/music/arcade/{bpm}/STEM_03_ROOM.{ext}",
+      "url_template": "/music/arcade/{bpm}/{rev}/STEM_03_ROOM.{ext}",
       "scales": [
         "a_natural_minor"
       ]
@@ -169,7 +175,7 @@
       "role": "arpeggiators and short synth plucks \u2014 movement",
       "always_active": false,
       "audible_in_calm": true,
-      "url_template": "/music/arcade/{bpm}/STEM_04_MOTION.{ext}",
+      "url_template": "/music/arcade/{bpm}/{rev}/STEM_04_MOTION.{ext}",
       "scales": [],
       "follows_harmony": true
     },
@@ -180,7 +186,7 @@
       "role": "pads and atmospheric synths \u2014 harmonic continuity",
       "always_active": true,
       "audible_in_calm": true,
-      "url_template": "/music/arcade/{bpm}/STEM_05_CHORDS.{ext}",
+      "url_template": "/music/arcade/{bpm}/{rev}/STEM_05_CHORDS.{ext}",
       "scales": [],
       "follows_harmony": true
     },
@@ -191,7 +197,7 @@
       "role": "the main Shootris melody, sparse and never continuous",
       "always_active": false,
       "audible_in_calm": false,
-      "url_template": "/music/arcade/{bpm}/STEM_06_THEME.{ext}",
+      "url_template": "/music/arcade/{bpm}/{rev}/STEM_06_THEME.{ext}",
       "scales": [
         "a_natural_minor"
       ],
@@ -208,7 +214,7 @@
       "role": "dark synth pulse, filtered distortion, fast hats \u2014 urgency",
       "always_active": false,
       "audible_in_calm": false,
-      "url_template": "/music/arcade/{bpm}/STEM_07_DANGER.{ext}",
+      "url_template": "/music/arcade/{bpm}/{rev}/STEM_07_DANGER.{ext}",
       "scales": [
         "a_natural_minor"
       ]
@@ -220,7 +226,7 @@
       "role": "warm pads, major-colour inversions, soft release \u2014 relief",
       "always_active": false,
       "audible_in_calm": false,
-      "url_template": "/music/arcade/{bpm}/STEM_08_RECOVERY.{ext}",
+      "url_template": "/music/arcade/{bpm}/{rev}/STEM_08_RECOVERY.{ext}",
       "scales": [],
       "follows_harmony": true
     }

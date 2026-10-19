@@ -51,3 +51,7 @@ cX/
 
 # State-mix previews from scripts/audio/render/preview.py — listening copies
 /scripts/audio/preview
+
+# Python bytecode from the audio generators and renderer
+__pycache__/
+*.py[cod]

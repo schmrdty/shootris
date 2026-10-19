@@ -20,6 +20,30 @@ const nextConfig = {
                     { key: 'Content-Security-Policy', value: `frame-ancestors ${miniHosts};` },
                 ],
             },
+            // Adaptive-soundtrack stems live under a directory named after the
+            // hash of their own bytes (see scripts/audio/render/render.py), so a
+            // given URL can never serve different audio. That is what makes
+            // `immutable` safe here: a returning player revalidates nothing, and
+            // a re-render reaches them at once under a new path rather than
+            // waiting out a max-age. Files in public/ otherwise get
+            // `max-age=0` from Next, which costs a round trip per stem per load.
+            {
+                source: '/music/:pack/:bpm/:rev/:file*',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            // meta.json is the index that points at those hashed directories, so
+            // it is the one file that must never be pinned — it is how a client
+            // learns a new revision exists. This matches Next's current default
+            // for public/, but the default has changed between versions and the
+            // whole scheme breaks silently if it changes again.
+            {
+                source: '/music/:pack/meta.json',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+                ],
+            },
         ];
     },
     // Nothing in the app uses next/image, so the optimizer was only an open

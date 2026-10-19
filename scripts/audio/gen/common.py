@@ -350,6 +350,41 @@ def audible_in_calm(stem_index: int) -> bool:
     return MIX_MATRIX["calm"][stem_index - 1] > 0
 
 
+# --- content addressing -----------------------------------------------------
+
+# Length of the revision segment in a stem URL. 12 hex characters is 48 bits:
+# at seven tiers re-rendered daily for a century the chance of a collision is
+# still vanishing, and it keeps the path readable.
+REVISION_LENGTH = 12
+
+
+def file_digest(path: str) -> str:
+    """SHA-256 of a file's bytes."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def revision_for(paths: dict[str, str]) -> str:
+    """The revision segment for one tier's shipped files.
+
+    Keyed on the bytes that actually ship, not on the inputs that made them:
+    the URL then changes if and only if a listener would hear something
+    different, which is the whole premise of serving them `immutable`.
+
+    `paths` maps each file's published name to its location on disk.
+    """
+    digest = hashlib.sha256()
+    for name in sorted(paths):
+        digest.update(name.encode())
+        digest.update(b"\0")
+        digest.update(file_digest(paths[name]).encode())
+        digest.update(b"\0")
+    return digest.hexdigest()[:REVISION_LENGTH]
+
+
 # --- determinism ------------------------------------------------------------
 
 def rng_for(pack: str, stem: str, bpm: float) -> random.Random:

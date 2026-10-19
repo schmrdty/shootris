@@ -71,7 +71,8 @@
       "bar_seconds": 2.857142857142857,
       "loop_seconds": 45.71429166666667,
       "loop_samples": 2194286,
-      "url_dir": "/music/zen/84"
+      "rev": "95a4ef8b9e2b",
+      "url_dir": "/music/zen/84/{rev}"
     }
   },
   "formats": [
@@ -106,7 +107,7 @@
       "role": "warm sub, tape bass, finger bass at 50-150 Hz \u2014 the anchor",
       "always_active": true,
       "audible_in_calm": true,
-      "url_template": "/music/zen/{bpm}/STEM_01_BASS.{ext}",
+      "url_template": "/music/zen/{bpm}/{rev}/STEM_01_BASS.{ext}",
       "scales": [
         "a_natural_minor"
       ]
@@ -118,7 +119,7 @@
       "role": "boom-bap kick, dusty snare, soft hats",
       "always_active": true,
       "audible_in_calm": true,
-      "url_template": "/music/zen/{bpm}/STEM_02_DRUMS.{ext}",
+      "url_template": "/music/zen/{bpm}/{rev}/STEM_02_DRUMS.{ext}",
       "scales": []
     },
     {
@@ -128,7 +129,7 @@
       "role": "vinyl crackle, tape noise, room textures at very low volume",
       "always_active": true,
       "audible_in_calm": true,
-      "url_template": "/music/zen/{bpm}/STEM_03_ROOM.{ext}",
+      "url_template": "/music/zen/{bpm}/{rev}/STEM_03_ROOM.{ext}",
       "scales": [
         "a_natural_minor"
       ]
@@ -140,7 +141,7 @@
       "role": "koto, pipa and guzheng-inspired plucks",
       "always_active": false,
       "audible_in_calm": true,
-      "url_template": "/music/zen/{bpm}/STEM_04_MOTION.{ext}",
+      "url_template": "/music/zen/{bpm}/{rev}/STEM_04_MOTION.{ext}",
       "scales": [
         "a_minor_pentatonic"
       ],
@@ -156,7 +157,7 @@
       "role": "Rhodes, electric piano, tape-warm keys",
       "always_active": true,
       "audible_in_calm": true,
-      "url_template": "/music/zen/{bpm}/STEM_05_CHORDS.{ext}",
+      "url_template": "/music/zen/{bpm}/{rev}/STEM_05_CHORDS.{ext}",
       "scales": [],
       "follows_harmony": true
     },
@@ -167,7 +168,7 @@
       "role": "the Mitty melody \u2014 sparse, rare, a reward",
       "always_active": false,
       "audible_in_calm": false,
-      "url_template": "/music/zen/{bpm}/STEM_06_THEME.{ext}",
+      "url_template": "/music/zen/{bpm}/{rev}/STEM_06_THEME.{ext}",
       "scales": [
         "a_minor_pentatonic",
         "a_hirajoshi"
@@ -185,7 +186,7 @@
       "role": "danger by subtraction: lower bass octave, filtered drone, sparse percussion",
       "always_active": false,
       "audible_in_calm": false,
-      "url_template": "/music/zen/{bpm}/STEM_07_DANGER.{ext}",
+      "url_template": "/music/zen/{bpm}/{rev}/STEM_07_DANGER.{ext}",
       "scales": [
         "a_natural_minor"
       ]
@@ -197,7 +198,7 @@
       "role": "wind bells, soft inversion chord, short plucked flourish",
       "always_active": false,
       "audible_in_calm": false,
-      "url_template": "/music/zen/{bpm}/STEM_08_RECOVERY.{ext}",
+      "url_template": "/music/zen/{bpm}/{rev}/STEM_08_RECOVERY.{ext}",
       "scales": [
         "a_minor_pentatonic"
       ]

@@ -37,6 +37,12 @@ export interface PackLoop {
   bar_seconds: number;
   loop_seconds: number;
   loop_samples: number;
+  /**
+   * Revision segment of this tier's stem URLs — the hash of the encoded bytes
+   * being served. Because the URL changes whenever the audio does, the files
+   * are served `immutable` and a returning player fetches no audio at all.
+   */
+  rev: string;
   url_dir: string;
 }
 
@@ -103,8 +109,36 @@ export async function loadPackMeta(pack: string, signal?: AbortSignal): Promise<
   return (await response.json()) as PackMeta;
 }
 
-function stemUrl(stem: PackStem, bpm: number, ext: string): string {
-  return stem.url_template.replace('{bpm}', String(bpm)).replace('{ext}', ext);
+function stemUrl(stem: PackStem, bpm: number, rev: string, ext: string): string {
+  return stem.url_template
+    .replace('{bpm}', String(bpm))
+    .replace('{rev}', rev)
+    .replace('{ext}', ext);
+}
+
+function tierRev(meta: PackMeta, bpm: number): string {
+  return meta.loops[String(bpm)]?.rev ?? '';
+}
+
+async function fetchEncoded(url: string): Promise<ArrayBuffer> {
+  const response = await fetch(url, { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`${url} responded ${response.status}`);
+  return response.arrayBuffer();
+}
+
+/**
+ * The format this browser says it can play, without decoding anything.
+ *
+ * Only a guess — `canPlayType` is advisory, notably for Opus in Safari — so it
+ * is used to aim the prefetch. The set build confirms by actually decoding.
+ */
+function predictFormat(meta: PackMeta): PackFormat {
+  if (typeof document !== 'undefined') {
+    const probe = document.createElement('audio');
+    const playable = meta.formats.find((format) => probe.canPlayType(format.mime));
+    if (playable) return playable;
+  }
+  return meta.formats[meta.formats.length - 1];
 }
 
 type AudioContextConstructor = new (options?: AudioContextOptions) => AudioContext;
@@ -160,6 +194,8 @@ export class ShootrisAudioEngine {
   private incoming: StemSet | null = null;
   private readonly buffers = new Map<string, AudioBuffer>();
   private readonly inflight = new Map<string, Promise<AudioBuffer>>();
+  /** Encoded bytes fetched before any AudioContext existed. */
+  private readonly prefetched = new Map<string, Promise<ArrayBuffer>>();
   private desiredState: AudioState = 'calm';
   private paused = false;
   private volume: number;
@@ -279,6 +315,7 @@ export class ShootrisAudioEngine {
 
     const format = await this.resolveFormat(meta, tier);
     if (this.disposed || this.requestedKey !== key) return;
+    const rev = tierRev(meta, tier);
     const set = this.createSet(meta, tier, format, master);
 
     const upfront = meta.stems.filter((stem) => stem.audible_in_calm ?? audibleInCalm(stem.name));
@@ -287,7 +324,7 @@ export class ShootrisAudioEngine {
     const loaded = await Promise.all(
       upfront.map(async (stem) => ({
         stem,
-        buffer: await this.buffer(stemUrl(stem, tier, format.ext)),
+        buffer: await this.buffer(stemUrl(stem, tier, rev, format.ext)),
       }))
     );
     if (this.disposed || this.requestedKey !== key) {
@@ -319,7 +356,37 @@ export class ShootrisAudioEngine {
     }
 
     // Everything else arrives in the background and joins in phase.
-    void this.attachLater(set, later, format, tier);
+    void this.attachLater(set, later, format, tier, rev);
+  }
+
+  /**
+   * Start downloading a tier's Calm-audible stems now.
+   *
+   * Fetching needs no AudioContext — only decoding does — so this runs before
+   * the user has touched the page and removes the download from the critical
+   * path between their first click and the first note. The bytes are held
+   * until the set is built, so nothing is fetched twice.
+   *
+   * It spends bandwidth on players who never press a key, which is the trade
+   * being made deliberately: pass `prefetch: false` to the hook to opt out.
+   */
+  prefetch(meta: PackMeta, bpm: number): void {
+    if (this.disposed || typeof fetch === 'undefined') return;
+    const tier = this.resolveTier(meta, bpm);
+    const rev = tierRev(meta, tier);
+    const format = predictFormat(meta);
+    for (const stem of meta.stems) {
+      if (!(stem.audible_in_calm ?? audibleInCalm(stem.name))) continue;
+      const url = stemUrl(stem, tier, rev, format.ext);
+      if (this.buffers.has(url) || this.inflight.has(url) || this.prefetched.has(url)) continue;
+      const request = fetchEncoded(url);
+      this.prefetched.set(url, request);
+      request.catch((error) => {
+        // A failed prefetch is not a failure: the set build will fetch again.
+        this.prefetched.delete(url);
+        this.options.onError?.(error, `prefetch:${stem.name}`);
+      });
+    }
   }
 
   /** Change the mix. Quantised to the next bar; gains only, never restarts. */
@@ -372,6 +439,7 @@ export class ShootrisAudioEngine {
     this.stop();
     this.buffers.clear();
     this.inflight.clear();
+    this.prefetched.clear();
     const context = this.context;
     this.context = null;
     this.master = null;
@@ -445,12 +513,13 @@ export class ShootrisAudioEngine {
     set: StemSet,
     stems: PackStem[],
     format: PackFormat,
-    bpm: number
+    bpm: number,
+    rev: string
   ): Promise<void> {
     for (const stem of stems) {
       if (this.disposed || set.releasing) return;
       try {
-        const buffer = await this.buffer(stemUrl(stem, bpm, format.ext));
+        const buffer = await this.buffer(stemUrl(stem, bpm, rev, format.ext));
         if (this.disposed || set.releasing || set.stems.has(stem.name)) continue;
         // Join at a whole number of loops after the phase origin, so the new
         // stem is in sync with the ones already playing.
@@ -574,10 +643,11 @@ export class ShootrisAudioEngine {
       return score(a) - score(b);
     });
     const reference = meta.stems[0];
+    const rev = tierRev(meta, bpm);
     let lastError: unknown = null;
     for (const format of ordered) {
       try {
-        await this.buffer(stemUrl(reference, bpm, format.ext));
+        await this.buffer(stemUrl(reference, bpm, rev, format.ext));
         return format;
       } catch (error) {
         lastError = error;
@@ -585,6 +655,25 @@ export class ShootrisAudioEngine {
       }
     }
     throw lastError ?? new Error('no decodable audio format for this browser');
+  }
+
+  /**
+   * Encoded bytes for a stem: whatever the prefetch already has, else a fetch.
+   *
+   * decodeAudioData detaches the ArrayBuffer it is handed, so prefetched bytes
+   * are good for exactly one decode and are dropped as they are taken.
+   */
+  private async encodedBytes(url: string): Promise<ArrayBuffer> {
+    const prefetched = this.prefetched.get(url);
+    if (prefetched) {
+      this.prefetched.delete(url);
+      try {
+        return await prefetched;
+      } catch {
+        // The prefetch failed; fetch it properly below.
+      }
+    }
+    return fetchEncoded(url);
   }
 
   private buffer(url: string): Promise<AudioBuffer> {
@@ -596,9 +685,7 @@ export class ShootrisAudioEngine {
     const request = (async () => {
       const context = this.context;
       if (!context) throw new Error('no AudioContext — call unlock() first');
-      const response = await fetch(url, { cache: 'force-cache' });
-      if (!response.ok) throw new Error(`${url} responded ${response.status}`);
-      const encoded = await response.arrayBuffer();
+      const encoded = await this.encodedBytes(url);
       // Safari only supports the callback form of decodeAudioData reliably.
       const decoded = await new Promise<AudioBuffer>((resolve, reject) => {
         const promise = context.decodeAudioData(encoded, resolve, reject);

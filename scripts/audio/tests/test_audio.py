@@ -23,11 +23,13 @@ sys.path.insert(0, HERE)
 
 from common import (  # noqa: E402
     METADATA_DIR,
+    REVISION_LENGTH,
     PUBLIC_MUSIC_DIR,
     SAMPLE_RATE,
     STEMS,
     WAV_DIR,
     bar_seconds,
+    revision_for,
     stem_filename,
 )
 from harness import check, main, test  # noqa: E402
@@ -58,6 +60,13 @@ def _tiers(pack: str) -> list[int]:
 
 def _sets() -> list[tuple[str, int]]:
     return [(pack, bpm) for pack in PACKS for bpm in _tiers(pack)]
+
+
+def _published_dir(pack: str, bpm: int) -> str:
+    """The revision directory a tier's encoded stems are published in."""
+    rev = METADATA[pack]["loops"][str(bpm)].get("rev")
+    check(bool(rev), f"{pack}/{bpm}: metadata has no revision — rerun render.py")
+    return os.path.join(PUBLIC_MUSIC_DIR, pack, str(bpm), rev)
 
 
 _WAV_CACHE: dict[str, np.ndarray] = {}
@@ -205,7 +214,7 @@ def test_encoded_lengths() -> str:
             offset = spec.get("decode_offset_samples", 0)
             for index, name in STEMS:
                 path = os.path.join(
-                    PUBLIC_MUSIC_DIR, pack, str(bpm), stem_filename(index, name, spec["ext"])
+                    _published_dir(pack, bpm), stem_filename(index, name, spec["ext"])
                 )
                 check(os.path.exists(path), f"missing {path}")
                 decoded = decode_to_pcm(path)
@@ -232,6 +241,87 @@ def test_encoded_lengths() -> str:
                     f"{path}: decoder prepends {lag} samples, metadata says {offset}",
                 )
     return f"{decoded_files} files decoded"
+
+
+@test("every URL the engine builds from the metadata resolves to a real file")
+def test_urls_resolve() -> str:
+    """The end-to-end check: templates in, files on disk out.
+
+    The engine never hardcodes a path — it substitutes {bpm}, {rev} and {ext}
+    into url_template — so this is what proves a player will not get a 404.
+    """
+    checked = 0
+    for pack, bpm in _sets():
+        meta = METADATA[pack]
+        rev = meta["loops"][str(bpm)].get("rev")
+        check(bool(rev), f"{pack}/{bpm}: metadata has no revision — rerun render.py")
+        for stem in meta["stems"]:
+            for spec in meta["formats"]:
+                url = (
+                    stem["url_template"]
+                    .replace("{bpm}", str(bpm))
+                    .replace("{rev}", rev)
+                    .replace("{ext}", spec["ext"])
+                )
+                check(url.startswith("/music/"), f"{url} is not under /music/")
+                # An empty placeholder would leave "//" in the URL, which the
+                # filesystem quietly collapses — so the check below would pass
+                # against the pre-revision layout. The browser would not.
+                check("//" not in url, f"{url} has an empty path segment")
+                check(
+                    "{" not in url and "}" not in url,
+                    f"{url} still has an unsubstituted placeholder",
+                )
+                path = os.path.join(PUBLIC_MUSIC_DIR, url[len("/music/"):])
+                check(os.path.exists(path), f"{url} resolves to nothing ({path})")
+                checked += 1
+    return f"{checked} URLs"
+
+
+@test("each revision is the hash of the bytes it names")
+def test_revision_matches_contents() -> str:
+    """A stale revision in the metadata, or a file edited in place, would serve
+    changed audio from a URL promised to be immutable. This is the check that
+    makes that impossible to do quietly."""
+    for pack, bpm in _sets():
+        published = _published_dir(pack, bpm)
+        files = {
+            name: os.path.join(published, name)
+            for name in os.listdir(published)
+            if os.path.isfile(os.path.join(published, name))
+        }
+        check(bool(files), f"{published} is empty")
+        expected = os.path.basename(published)
+        actual = revision_for(files)
+        check(
+            actual == expected,
+            f"{pack}/{bpm}: directory says revision {expected} but its "
+            f"{len(files)} files hash to {actual} — rerun render.py",
+        )
+    return f"{len(_sets())} revisions verified"
+
+
+@test("nothing is published outside a revision directory, so the cache policy covers it")
+def test_layout_matches_cache_headers() -> str:
+    """next.config.mjs serves /music/:pack/:bpm/:rev/:file* as immutable and
+    /music/:pack/meta.json as always-revalidate. Anything at another depth
+    would fall through to the framework default, which has changed between
+    Next versions."""
+    stray: list[str] = []
+    for pack in PACKS:
+        pack_root = os.path.join(PUBLIC_MUSIC_DIR, pack)
+        for root, _dirs, files in os.walk(pack_root):
+            for name in files:
+                full = os.path.join(root, name)
+                parts = os.path.relpath(full, PUBLIC_MUSIC_DIR).split(os.sep)
+                if parts == [pack, "meta.json"]:
+                    continue
+                # pack / bpm / rev / file
+                if len(parts) == 4 and len(parts[2]) == REVISION_LENGTH:
+                    continue
+                stray.append(os.path.relpath(full, PUBLIC_MUSIC_DIR))
+    check(not stray, f"files at an uncovered path: {stray[:5]}")
+    return "every file is meta.json or inside a revision directory"
 
 
 @test("metadata is mirrored into public/music/<pack>/meta.json")

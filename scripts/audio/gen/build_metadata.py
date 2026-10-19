@@ -160,7 +160,10 @@ def build(pack: str) -> dict:
             "bar_seconds": bar_seconds(bpm),
             "loop_seconds": samples / SAMPLE_RATE,
             "loop_samples": samples,
-            "url_dir": f"/music/{pack}/{bpm}",
+            # Filled in by render.py from the hash of the encoded bytes; it is
+            # what makes a stem URL safe to serve `immutable`.
+            "rev": "",
+            "url_dir": f"/music/{pack}/{bpm}/{{rev}}",
         }
 
     stems = []
@@ -173,7 +176,7 @@ def build(pack: str) -> dict:
             "role": meta["role"],
             "always_active": always_active(index),
             "audible_in_calm": audible_in_calm(index),
-            "url_template": f"/music/{pack}/{{bpm}}/{stem_filename(index, name, '{ext}')}",
+            "url_template": f"/music/{pack}/{{bpm}}/{{rev}}/{stem_filename(index, name, '{ext}')}",
             "scales": meta.get("scales", []),
         }
         if meta.get("follows_harmony"):
@@ -211,16 +214,27 @@ def main() -> None:
         path = os.path.join(METADATA_DIR, f"{pack}.json")
         # Keep any format measurements render.py has already written.
         existing_formats = {}
+        existing_revs: dict[str, str] = {}
         if os.path.exists(path):
             with open(path) as handle:
-                for entry in json.load(handle).get("formats", []):
-                    existing_formats[entry["id"]] = entry
+                previous_document = json.load(handle)
+            for entry in previous_document.get("formats", []):
+                existing_formats[entry["id"]] = entry
+            for key, loop in previous_document.get("loops", {}).items():
+                if loop.get("rev"):
+                    existing_revs[key] = loop["rev"]
         document = build(pack)
         for entry in document["formats"]:
             previous = existing_formats.get(entry["id"])
             if previous:
                 entry["decode_offset_samples"] = previous.get("decode_offset_samples", 0)
                 entry["decoded_length_samples"] = previous.get("decoded_length_samples", {})
+        # Revisions name directories that already exist on disk, so rebuilding
+        # the metadata must never forget them — that would point every stem URL
+        # at a path that is not there.
+        for key, rev in existing_revs.items():
+            if key in document["loops"]:
+                document["loops"][key]["rev"] = rev
         with open(path, "w") as handle:
             json.dump(document, handle, indent=2)
             handle.write("\n")

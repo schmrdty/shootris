@@ -38,6 +38,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "gen"))
 import synth  # noqa: E402
 from common import (  # noqa: E402
     DRUM_VOICES,
+    REVISION_LENGTH,
     METADATA_DIR,
     MIDI_DIR,
     PUBLIC_MUSIC_DIR,
@@ -46,6 +47,7 @@ from common import (  # noqa: E402
     WAV_DIR,
     PrettyMIDI,
     loop_samples,
+    revision_for,
     stem_filename,
 )
 
@@ -257,6 +259,14 @@ def render_stem(
 
 # --- encoding ----------------------------------------------------------------
 
+# Without these, Ogg gives every stream a random bitstream serial number, so
+# re-encoding identical audio produces different bytes — which would change the
+# content hash in every stem URL and throw away every listener's cache for no
+# musical reason. `+bitexact` fixes the serial and drops the encoder's vendor
+# string; `-map_metadata -1` keeps the input's tags out of the output.
+DETERMINISTIC_ARGS = ["-fflags", "+bitexact", "-flags:a", "+bitexact", "-map_metadata", "-1"]
+
+
 def encode(master: str, destination: str, spec: dict) -> None:
     os.makedirs(os.path.dirname(destination), exist_ok=True)
     if spec["codec"] == "opus":
@@ -276,7 +286,7 @@ def encode(master: str, destination: str, spec: dict) -> None:
     else:
         raise SystemExit(f"unsupported codec {spec['codec']!r}")
     subprocess.run(
-        ["ffmpeg", "-y", "-v", "error", "-i", master, *codec_args, destination],
+        ["ffmpeg", "-y", "-v", "error", "-i", master, *DETERMINISTIC_ARGS, *codec_args, destination],
         check=True,
     )
 
@@ -316,6 +326,51 @@ def measure_lag(master_mono: np.ndarray, decoded_mono: np.ndarray, max_lag: int 
     return int(np.argmax(correlation[: max_lag + 1]))
 
 
+# --- publishing --------------------------------------------------------------
+
+def publish_tier(
+    pack: str, bpm: int, staged: dict[str, str], keep_old: bool = False
+) -> tuple[str, bool]:
+    """Move a tier's encoded files to /music/<pack>/<bpm>/<rev>/ and return the rev.
+
+    The revision is the hash of the bytes being published, so the URL changes
+    if and only if the audio does. That is what lets the files be served
+    `immutable`: a browser never has to ask whether its copy is still good,
+    and a re-render reaches listeners immediately under a new path rather than
+    waiting out a max-age.
+
+    Returns (revision, changed).
+    """
+    revision = revision_for(staged)
+    tier_root = os.path.join(PUBLIC_MUSIC_DIR, pack, str(bpm))
+    target = os.path.join(tier_root, revision)
+    changed = not os.path.isdir(target)
+
+    os.makedirs(target, exist_ok=True)
+    for name, source in staged.items():
+        shutil.move(source, os.path.join(target, name))
+
+    if os.path.isdir(tier_root):
+        for entry in os.listdir(tier_root):
+            path = os.path.join(tier_root, entry)
+            if os.path.isfile(path):
+                # Nothing belongs at the tier root any more; a stem here is a
+                # leftover from before the stems were content-addressed, and it
+                # would be served with no revision and no cache policy.
+                os.remove(path)
+            elif (
+                not keep_old
+                and entry != revision
+                and len(entry) == REVISION_LENGTH
+                and os.path.isdir(path)
+            ):
+                # Superseded revisions are dead weight: the index that pointed
+                # at them is replaced in the same deploy, and each one is
+                # another few megabytes in the repo and the image.
+                shutil.rmtree(path, ignore_errors=True)
+    return revision, changed
+
+
 # --- driver ------------------------------------------------------------------
 
 def main() -> None:
@@ -330,6 +385,11 @@ def main() -> None:
     )
     parser.add_argument("--skip-wav", action="store_true", help="reuse existing WAV masters")
     parser.add_argument("--skip-encode", action="store_true", help="render masters only")
+    parser.add_argument(
+        "--keep-old-revisions",
+        action="store_true",
+        help="leave superseded revision directories in place instead of pruning them",
+    )
     args = parser.parse_args()
 
     packs = PACKS if args.pack == "all" else (args.pack,)
@@ -359,6 +419,13 @@ def main() -> None:
             print(f"\n{pack} @ {bpm} BPM  ({expected} samples)")
             lags: dict[str, list[int]] = {f["id"]: [] for f in formats}
             decoded: dict[str, list[int]] = {f["id"]: [] for f in formats}
+            # Encoded files are staged first: the directory they end up in is
+            # named after their own hash, which is not known until they exist.
+            staging = os.path.join(scratch, f"{pack}-{bpm}")
+            if os.path.isdir(staging):
+                shutil.rmtree(staging)
+            os.makedirs(staging, exist_ok=True)
+            staged: dict[str, str] = {}
 
             for index, name in STEMS:
                 tick = time.time()
@@ -375,10 +442,9 @@ def main() -> None:
                 if not args.skip_encode:
                     reference = audio.mean(axis=0)
                     for format_spec in formats:
-                        target = os.path.join(
-                            PUBLIC_MUSIC_DIR, pack, str(bpm),
-                            stem_filename(index, name, format_spec["ext"]),
-                        )
+                        filename = stem_filename(index, name, format_spec["ext"])
+                        target = os.path.join(staging, filename)
+                        staged[filename] = target
                         encode(master, target, format_spec)
                         back = decode_to_pcm(target)
                         decoded[format_spec["id"]].append(back.shape[1])
@@ -404,6 +470,17 @@ def main() -> None:
                 offset = max(lags[format_spec["id"]])
                 previous = format_spec.get("decode_offset_samples", 0)
                 format_spec["decode_offset_samples"] = max(previous, offset)
+
+            if staged:
+                revision, changed = publish_tier(pack, bpm, staged, args.keep_old_revisions)
+                meta["loops"][str(bpm)]["rev"] = revision
+                state = "new" if changed else "unchanged"
+                print(f"  -> /music/{pack}/{bpm}/{revision}/  ({state}, {len(staged)} files)")
+            elif not meta["loops"][str(bpm)].get("rev"):
+                raise SystemExit(
+                    f"{pack} @ {bpm}: no revision recorded and nothing encoded — "
+                    "run without --skip-encode at least once"
+                )
 
         with open(meta_path, "w") as handle:
             json.dump(meta, handle, indent=2)

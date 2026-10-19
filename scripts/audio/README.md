@@ -28,8 +28,8 @@ src/lib/audio/
   stateMachine.test.ts         spec test 10
   engine.ts                    Web Audio playback
   useShootrisAudio.ts          game variables -> state machine -> engine
-public/music/<pack>/<bpm>/     STEM_0N_<NAME>.ogg and .m4a
-public/music/<pack>/meta.json  the pack metadata the engine fetches
+public/music/<pack>/<bpm>/<rev>/  STEM_0N_<NAME>.ogg and .m4a
+public/music/<pack>/meta.json    the pack metadata the engine fetches
 ```
 
 ## Regenerate
@@ -119,6 +119,47 @@ Loop points are kept in **seconds**, not samples: `decodeAudioData` may
 resample to the AudioContext's rate, which preserves durations but not sample
 counts.
 
+### Content-addressed URLs
+
+Stems are published under a directory named after the hash of their own bytes:
+
+```
+/music/zen/84/95a4ef8b9e2b/STEM_01_BASS.ogg
+              ^^^^^^^^^^^^ the revision: sha256 of this tier's 16 shipped files
+```
+
+The URL therefore changes if and only if the audio changes, which is what lets
+`next.config.mjs` serve these files `max-age=31536000, immutable`. A returning
+player fetches **no audio at all** — not even a conditional request — and a
+re-render reaches them immediately under a new path instead of waiting out a
+`max-age`. Files in `public/` otherwise get `max-age=0` from Next, which costs
+a round trip per stem per page load.
+
+`meta.json` is the index that points at those directories, so it is the one
+file that must never be pinned: it is served `max-age=0, must-revalidate`. That
+matches Next's current default, but the default has changed between major
+versions, so it is set explicitly — the whole scheme fails silently if the
+index is cached.
+
+Three consequences worth knowing:
+
+* **The encode is forced to be deterministic.** Ogg gives every stream a random
+  bitstream serial number, so re-encoding identical audio produced different
+  bytes and a different revision — throwing away every listener's cache for no
+  musical reason. `DETERMINISTIC_ARGS` in `render.py` (`-fflags +bitexact`,
+  `-flags:a +bitexact`, `-map_metadata -1`) pins it, and re-running the encode
+  on unchanged masters now reports `(unchanged)`.
+* **Superseded revisions are pruned** as a tier is published, because the index
+  that pointed at them is replaced in the same deploy. `--keep-old-revisions`
+  keeps them if you want to serve two versions at once.
+* **Rebuilding the metadata preserves the revisions.** `build_metadata.py`
+  carries `loops[bpm].rev` across a rebuild — forgetting it would point every
+  stem URL at a directory that is not there.
+
+`pnpm test:audio` checks all of this: that every URL the metadata builds
+resolves to a real file, that each revision really is the hash of the bytes it
+names, and that nothing is published at a path the cache rules do not cover.
+
 ## Listen to it
 
 A single stem on its own is not the soundtrack — the game plays all eight at
@@ -199,6 +240,13 @@ The hook fetches nothing until `enabled` is true, and creates no AudioContext
 until the player's first click or keypress — so a muted player downloads no
 audio and no error is reported before a gesture has happened.
 
+Once music *is* enabled it prefetches the five Calm-audible stems straight
+away, without waiting for that gesture: fetching needs no AudioContext, only
+decoding does, so this takes the download off the path between the player's
+first click and the first note. The bytes are held until the set is built, so
+nothing is fetched twice. It does spend a few megabytes on someone who opens
+the page and never plays — pass `prefetch: false` to opt out.
+
 ### What the hook derives
 
 Shootris tracks four of the eight variables the state machine wants. The rest
@@ -264,6 +312,10 @@ node --experimental-strip-types --test src/lib/audio/stateMachine.test.ts   # 10
 | 8 | every stem is non-silent rendered solo |
 | 9 | encoded files decode to a length that puts `loopEnd` exactly in place |
 | 10 | every state, the priority order, and Recovery's 15 s timeout |
+
+Plus, on the published layout: every URL the metadata builds resolves to a real
+file, each revision is the hash of the bytes it names, and nothing sits at a
+path `next.config.mjs` does not give a cache policy.
 
 Test 5 allows 0.001 BPM: a MIDI tempo is stored as whole microseconds per
 beat, so 84 BPM round-trips as 83.99997 and no file can be more exact.

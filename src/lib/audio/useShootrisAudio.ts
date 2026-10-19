@@ -66,6 +66,13 @@ export interface UseShootrisAudioOptions {
   runKey?: string | number;
   thresholds?: Partial<AudioStateThresholds>;
   masterVolume?: number;
+  /**
+   * Download the Calm-audible stems as soon as music is enabled, rather than
+   * waiting for the player's first gesture. Takes the download off the path
+   * between their first click and the first note, at the cost of a few
+   * megabytes for a player who opens the page and never plays. Default true.
+   */
+  prefetch?: boolean;
 }
 
 /** What the hook keeps in React state — it changes rarely, unlike the variables. */
@@ -114,6 +121,7 @@ export function useShootrisAudio(options: UseShootrisAudioOptions): ShootrisAudi
     runKey = 0,
     thresholds,
     masterVolume,
+    prefetch = true,
   } = options;
 
   const engineRef = useRef<ShootrisAudioEngine | null>(null);
@@ -189,22 +197,31 @@ export function useShootrisAudio(options: UseShootrisAudioOptions): ShootrisAudi
     );
   }, [runKey]);
 
-  // Pack metadata is a plain fetch, so it can be warmed before any gesture —
-  // but only once the player has music on, so a muted player downloads nothing.
+  // Both the metadata and the stems are plain fetches, so they can be warmed
+  // before any gesture — but only once the player has music on, so a muted
+  // player downloads nothing at all.
   useEffect(() => {
     if (!enabled || !supported) return;
-    if (metaRef.current.has(pack)) return;
     const controller = new AbortController();
-    loadPackMeta(pack, controller.signal)
-      .then((meta) => {
+
+    const warm = async () => {
+      let meta = metaRef.current.get(pack);
+      if (!meta) {
+        meta = await loadPackMeta(pack, controller.signal);
         metaRef.current.set(pack, meta);
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        setStatus((prev: EngineStatus) => ({ ...prev, error: `meta:${pack}: ${String(error)}` }));
-      });
+      }
+      if (controller.signal.aborted || !prefetch) return;
+      // Creating the engine does not touch Web Audio — the AudioContext is
+      // built in unlock(), which still waits for a gesture.
+      engine()?.prefetch(meta, arcadeTierForStage(idle ? 1 : stage, meta.bpm_tiers));
+    };
+
+    void warm().catch((error) => {
+      if (controller.signal.aborted) return;
+      setStatus((prev: EngineStatus) => ({ ...prev, error: `meta:${pack}: ${String(error)}` }));
+    });
     return () => controller.abort();
-  }, [enabled, pack, supported]);
+  }, [enabled, pack, supported, prefetch, stage, idle, engine]);
 
   /** Start (or switch to) the chosen pack. Requires an unlocked context. */
   const startPack = useCallback(async () => {

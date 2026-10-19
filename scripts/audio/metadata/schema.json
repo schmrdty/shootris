@@ -22,13 +22,21 @@
     "mix_matrix"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": {
+      "const": 1
+    },
     "pack": {
       "type": "string",
       "description": "Stable pack id, also the public URL segment.",
-      "enum": ["arcade", "zen"]
+      "enum": [
+        "arcade",
+        "zen"
+      ]
     },
-    "display_name": { "type": "string", "minLength": 1 },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
     "codename": {
       "type": "string",
       "description": "Internal name, where the pack has one (zen is codenamed mitty)."
@@ -45,12 +53,21 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["display_name", "pitch_classes"],
+        "required": [
+          "display_name",
+          "pitch_classes"
+        ],
         "properties": {
-          "display_name": { "type": "string" },
+          "display_name": {
+            "type": "string"
+          },
           "pitch_classes": {
             "type": "array",
-            "items": { "type": "integer", "minimum": 0, "maximum": 11 },
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 11
+            },
             "minItems": 1,
             "maxItems": 12,
             "uniqueItems": true
@@ -61,27 +78,41 @@
     "bpm_tiers": {
       "type": "array",
       "description": "Every BPM a full stem set exists for, ascending. A fixed-tempo pack has exactly one entry.",
-      "items": { "type": "integer", "minimum": 40, "maximum": 300 },
+      "items": {
+        "type": "integer",
+        "minimum": 40,
+        "maximum": 300
+      },
       "minItems": 1,
       "uniqueItems": true
     },
-    "bars_per_loop": { "const": 16 },
+    "bars_per_loop": {
+      "const": 16
+    },
     "time_signature": {
       "type": "array",
       "description": "[beats_per_bar, beat_unit].",
-      "items": { "type": "integer", "minimum": 1 },
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
       "minItems": 2,
       "maxItems": 2
     },
     "sample_rate": {
       "type": "integer",
       "description": "Sample rate of the WAV masters and of every loop_samples figure below.",
-      "enum": [44100, 48000]
+      "enum": [
+        44100,
+        48000
+      ]
     },
     "harmony": {
       "type": "array",
       "description": "One chord symbol per bar of the loop (length == bars_per_loop). Chord stems are validated against this.",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "loops": {
       "type": "object",
@@ -90,13 +121,27 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["bpm", "bar_seconds", "loop_seconds", "loop_samples", "url_dir"],
+        "required": [
+          "bpm",
+          "bar_seconds",
+          "loop_seconds",
+          "loop_samples",
+          "rev",
+          "url_dir"
+        ],
         "properties": {
-          "bpm": { "type": "integer", "minimum": 40, "maximum": 300 },
-          "bar_seconds": { "type": "number", "exclusiveMinimum": 0 },
+          "bpm": {
+            "type": "integer",
+            "minimum": 40,
+            "maximum": 300
+          },
+          "bar_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
           "loop_seconds": {
             "type": "number",
-            "description": "loop_samples / sample_rate — the authoritative loopEnd for the engine, so the value is exactly sample-aligned.",
+            "description": "loop_samples / sample_rate \u2014 the authoritative loopEnd for the engine, so the value is exactly sample-aligned.",
             "exclusiveMinimum": 0
           },
           "loop_samples": {
@@ -106,7 +151,12 @@
           },
           "url_dir": {
             "type": "string",
-            "description": "Public directory holding this set's encoded stems."
+            "description": "Public directory holding this set's encoded stems, with a {rev} placeholder."
+          },
+          "rev": {
+            "type": "string",
+            "description": "Revision segment of this tier's stem URLs: the hash of the encoded bytes being served, written by render.py. The URL changes if and only if the audio does, which is what allows the files to be served immutable. Empty until a render has published the tier.",
+            "pattern": "^([0-9a-f]{12})?$"
           }
         }
       }
@@ -118,16 +168,32 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "ext", "mime", "codec"],
+        "required": [
+          "id",
+          "ext",
+          "mime",
+          "codec"
+        ],
         "properties": {
-          "id": { "type": "string", "minLength": 1 },
-          "ext": { "type": "string", "pattern": "^[a-z0-9]+$" },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ext": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+$"
+          },
           "mime": {
             "type": "string",
             "description": "Passed to HTMLMediaElement.canPlayType for the capability probe."
           },
-          "codec": { "type": "string" },
-          "bitrate_kbps": { "type": "integer", "exclusiveMinimum": 0 },
+          "codec": {
+            "type": "string"
+          },
+          "bitrate_kbps": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
           "decode_offset_samples": {
             "type": "integer",
             "description": "Samples of codec priming a spec-compliant decoder prepends to the loop. Added to loopStart/loopEnd by the engine. 0 for sample-exact codecs.",
@@ -136,7 +202,10 @@
           "decoded_length_samples": {
             "type": "object",
             "description": "Measured decoded length per BPM tier, keyed by BPM string. Test 9 compares this against loop_samples.",
-            "additionalProperties": { "type": "integer", "exclusiveMinimum": 0 }
+            "additionalProperties": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            }
           }
         }
       }
@@ -149,15 +218,41 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "index", "always_active", "url_template", "role"],
+        "required": [
+          "id",
+          "name",
+          "index",
+          "always_active",
+          "url_template",
+          "role"
+        ],
         "properties": {
-          "id": { "type": "string", "pattern": "^STEM_0[1-8]$" },
+          "id": {
+            "type": "string",
+            "pattern": "^STEM_0[1-8]$"
+          },
           "name": {
             "type": "string",
-            "enum": ["BASS", "DRUMS", "ROOM", "MOTION", "CHORDS", "THEME", "DANGER", "RECOVERY"]
+            "enum": [
+              "BASS",
+              "DRUMS",
+              "ROOM",
+              "MOTION",
+              "CHORDS",
+              "THEME",
+              "DANGER",
+              "RECOVERY"
+            ]
           },
-          "index": { "type": "integer", "minimum": 1, "maximum": 8 },
-          "role": { "type": "string", "minLength": 1 },
+          "index": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
           "always_active": {
             "type": "boolean",
             "description": "True when the stem has a non-zero target gain in every state, so the engine never lets it fall silent."
@@ -168,12 +263,14 @@
           },
           "url_template": {
             "type": "string",
-            "description": "Public URL with {bpm} and {ext} placeholders, e.g. /music/zen/{bpm}/STEM_01_BASS.{ext}."
+            "description": "Public URL with {bpm}, {rev} and {ext} placeholders, e.g. /music/zen/{bpm}/{rev}/STEM_01_BASS.{ext}. {rev} comes from loops[bpm].rev."
           },
           "scales": {
             "type": "array",
             "description": "Scale ids from scales[] this stem's pitched notes must belong to. A stem with phrase-level scale switching lists several; each phrase must fit one of them entirely. Omitted or empty means the stem is unpitched (drums/noise) or validated against harmony instead.",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           },
           "follows_harmony": {
             "type": "boolean",
@@ -184,8 +281,14 @@
             "additionalProperties": false,
             "description": "Melodic constraints enforced by the offline tests.",
             "properties": {
-              "max_phrase_notes": { "type": "integer", "exclusiveMinimum": 0 },
-              "min_bars_between_phrases": { "type": "integer", "exclusiveMinimum": 0 },
+              "max_phrase_notes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "min_bars_between_phrases": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
               "phrase_gap_beats": {
                 "type": "number",
                 "description": "A rest of at least this many beats separates two phrases.",
@@ -200,7 +303,9 @@
       "type": "array",
       "description": "Audio state ids, in the state machine's evaluation (priority) order.",
       "minItems": 1,
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "mix_matrix": {
       "type": "object",
@@ -210,8 +315,14 @@
         "type": "object",
         "minProperties": 8,
         "maxProperties": 8,
-        "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 },
-        "propertyNames": { "pattern": "^STEM_0[1-8]$" }
+        "additionalProperties": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "propertyNames": {
+          "pattern": "^STEM_0[1-8]$"
+        }
       }
     }
   }
