@@ -17,7 +17,8 @@ import { useSendTransaction, useReadContract, useSwitchChain } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { InGameMusicControls } from '@/components/InGameMusicControls';
 import { StageAmbience } from '@/components/StageAmbience';
-import { useMusicPreference } from '@/lib/music';
+import { useMusicPreference, useMusicPack } from '@/lib/music';
+import { useShootrisAudio } from '@/lib/audio/useShootrisAudio';
 import { MobileControls } from '@/components/MobileControls';
 import { useTouchControls, useBoardCellSize, CONTROL_DECK_HEIGHT } from '@/hooks/useTouchControls';
 import { ConnectWalletButton } from '@/components/ConnectWalletButton';
@@ -52,6 +53,7 @@ export default function SinglePlayerPage() {
     [connection, address]
   );
   const [musicOn, setMusicOn] = useMusicPreference(player?.musicOn, persistMusic);
+  const [musicPack, setMusicPack] = useMusicPack();
   // Phones and tablets: on-screen controls, board sized to fit above them
   const touch = useTouchControls();
   const cell = useBoardCellSize(touch, 220);
@@ -253,6 +255,24 @@ export default function SinglePlayerPage() {
         ? Math.max(0, levelDeadline - nowTick)
         : frozenMsRef.current;
   const journeyTimeLeft = journeyMsLeft === null ? null : Math.ceil(journeyMsLeft / 1000);
+
+  // Adaptive soundtrack. It derives the rest of what it needs (piece rate,
+  // mistakes, board fill, time alive) from these; nothing is fetched or played
+  // until the player has music on and has interacted with the page.
+  useShootrisAudio({
+    enabled: musicOn,
+    pack: musicPack,
+    board: gameState.board,
+    piecesPlaced: gameState.piecesPlaced,
+    combo: gameState.combo,
+    score: gameState.score,
+    stage,
+    paused: halted || gameState.gameOver || mode === null,
+    idle: mode === null,
+    // Journey's level clock running out is danger the board alone cannot show.
+    dangerMode: journeyTimeLeft !== null && journeyTimeLeft <= 10,
+    runKey: runNonce,
+  });
 
   // Game over: snapshot the board, record the score, and prompt to continue
   useEffect(() => {
@@ -510,11 +530,16 @@ export default function SinglePlayerPage() {
       className={`min-h-screen bg-gradient-to-br from-gray-950 via-black to-blue-950 px-4 ${touch ? 'pt-14' : 'py-8 pt-16'}`}
       style={touch ? { paddingBottom: CONTROL_DECK_HEIGHT + 8 } : undefined}
     >
-      {/* Per-stage backdrop + music (files load as they're produced) */}
-      <StageAmbience stage={stage} isEarthen={isEarthen} muted={!musicOn} />
+      {/* Per-stage backdrop (art loads as it's produced) */}
+      <StageAmbience stage={stage} isEarthen={isEarthen} />
 
-      {/* In-Game Music Controls */}
-      <InGameMusicControls musicOn={musicOn} onToggle={setMusicOn} />
+      {/* Mute, and which adaptive soundtrack is playing */}
+      <InGameMusicControls
+        musicOn={musicOn}
+        onToggle={setMusicOn}
+        pack={musicPack}
+        onPackChange={setMusicPack}
+      />
 
       {/* Mode chooser — shown until the player picks how to play */}
       {mode === null && (

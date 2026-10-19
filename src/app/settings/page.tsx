@@ -13,7 +13,13 @@ import { Sprout, Zap, Sparkles } from 'lucide-react';
 import { SET_LABELS, PIECE_KEYS, FREE_SETS, cardsToComplete } from '@/lib/skins';
 import { useCollection } from '@/lib/collection';
 import { useCallback } from 'react';
-import { useMusicPreference } from '@/lib/music';
+import {
+  MUSIC_PACKS,
+  MUSIC_PACK_BLURBS,
+  MUSIC_PACK_LABELS,
+  useMusicPack,
+  useMusicPreference,
+} from '@/lib/music';
 import { usePlayerStats } from '@/lib/spacetime/stats';
 import { PlayerName } from '@/components/PlayerName';
 import { ExternalLink } from '@/components/ExternalLink';
@@ -34,6 +40,7 @@ export default function SettingsPage() {
     [connection, address]
   );
   const [musicOn, setMusicOn] = useMusicPreference(player?.musicOn, persistMusic);
+  const [musicPack, setMusicPack] = useMusicPack();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 px-4 py-8 pt-16">
@@ -175,10 +182,36 @@ export default function SettingsPage() {
                   Music
                 </Label>
                 <p className="text-sm text-gray-400">
-                  Stage music. Saved on this device, and to your profile when a wallet is connected.
+                  Saved on this device, and to your profile when a wallet is connected.
                 </p>
               </div>
               <Switch id="music-toggle" checked={musicOn} onCheckedChange={setMusicOn} />
+            </div>
+
+            <div className="space-y-2 border-t border-gray-800 pt-4">
+              <Label className="text-base">Soundtrack</Label>
+              <p className="text-sm text-gray-400">
+                Both soundtracks follow how the run is going rather than looping one track.
+                Saved on this device.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {MUSIC_PACKS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setMusicPack(option)}
+                    aria-pressed={musicPack === option}
+                    className={`rounded-lg border-2 p-3 text-left transition-all ${
+                      musicPack === option
+                        ? 'border-purple-400 bg-purple-500/10'
+                        : 'border-gray-700 hover:border-gray-500'
+                    }`}
+                  >
+                    <p className="font-bold text-purple-300">{MUSIC_PACK_LABELS[option]}</p>
+                    <p className="mt-0.5 text-xs text-gray-400">{MUSIC_PACK_BLURBS[option]}</p>
+                  </button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
